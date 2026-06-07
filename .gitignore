@@ -27,6 +27,7 @@ Thumbs.db
 worker/dist/
 
 # Local-only files
+.agent/
 posts/
 design-system/
 
