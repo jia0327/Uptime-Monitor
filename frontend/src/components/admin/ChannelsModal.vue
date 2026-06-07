@@ -32,8 +32,8 @@
         </div>
 
         <div class="flex-1 overflow-y-auto p-5 sm:p-6">
-          <div class="grid gap-5 lg:grid-cols-3">
-            <section class="lg:col-span-2 space-y-3">
+          <div class="grid gap-5 lg:grid-cols-5">
+            <section class="order-2 lg:order-2 lg:col-span-2 space-y-3">
               <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500">渠道列表</h4>
@@ -69,7 +69,7 @@
                 <article v-for="ch in channels" :key="ch.id"
                   class="rounded-xl border px-4 py-4 transition-all"
                   :class="editing?.id === ch.id ? 'border-green-500/50 bg-green-500/10 shadow-lg shadow-green-500/5' : 'border-slate-700 bg-slate-900/35 hover:border-slate-600 hover:bg-slate-900/55'">
-                  <div class="flex flex-col md:flex-row md:items-center gap-4">
+                  <div class="flex flex-col gap-4">
                     <div class="flex items-center gap-3 min-w-0 flex-1 rounded-lg cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400"
                       role="button" tabindex="0" @click="editCh(ch)" @keydown.enter.prevent="editCh(ch)" @keydown.space.prevent="editCh(ch)"
                       :aria-label="`编辑通知渠道：${ch.name}`">
@@ -93,7 +93,7 @@
                       </div>
                     </div>
 
-                    <div class="flex items-center justify-between md:justify-end gap-2 shrink-0">
+                    <div class="flex items-center justify-between gap-2 shrink-0">
                       <button @click.stop="toggleCh(ch)" :disabled="togglingId === ch.id"
                         class="relative w-14 h-9 rounded-full transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400 disabled:opacity-60"
                         :class="isEnabled(ch) ? 'bg-green-600' : 'bg-slate-700'"
@@ -116,14 +116,14 @@
               </div>
             </section>
 
-            <aside class="lg:col-span-1">
+            <aside class="order-1 lg:order-1 lg:col-span-3">
               <div v-if="!editing" class="rounded-2xl border border-slate-700 bg-slate-900/30 p-5">
                 <div class="w-11 h-11 rounded-xl bg-green-500/15 flex items-center justify-center mb-4">
                   <i class="fas fa-route text-green-400"></i>
                 </div>
                 <h4 class="text-base font-bold text-white">选择或添加渠道</h4>
-                <p class="text-sm text-slate-500 mt-1 mb-5">从左侧选择已有渠道，或直接选择一种类型开始添加。</p>
-                <div class="grid grid-cols-2 gap-2">
+                <p class="text-sm text-slate-500 mt-1 mb-5">从右侧选择已有渠道，或直接选择一种类型开始添加。</p>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   <button v-for="item in channelTypeOptions" :key="item.key" @click="startCreate(item.key)"
                     class="rounded-xl border border-slate-700 bg-slate-900/50 px-3 py-3 text-left hover:border-green-500/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400 transition-colors cursor-pointer">
                     <i :class="item.iconClass"></i>
@@ -153,7 +153,7 @@
                 <div class="p-5 space-y-5">
                   <div v-if="!editing.id">
                     <label class="block text-xs font-semibold text-slate-400 mb-2">渠道类型</label>
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
                       <button v-for="item in channelTypeOptions" :key="item.key" @click="selectType(item.key)"
                         class="rounded-xl border px-3 py-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400 cursor-pointer"
                         :class="editing.type === item.key ? 'border-green-500 bg-green-900/20' : 'border-slate-700 bg-slate-900/40 hover:border-green-500/40'">
