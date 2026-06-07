@@ -6,17 +6,46 @@ Uptime Monitor 是一个基于 Cloudflare Workers、Pages 和 D1 的轻量级网
 
 项目依赖 Cloudflare 免费额度即可运行，不需要自建服务器。前端已移除 Google Fonts、运行时图标 CDN 等海外依赖，默认使用本地打包字体和图标，更适合国内用户访问。
 
+## 适合谁
+
+- 个人站长：监控博客、文档站、API、图床、反代服务等。
+- 独立开发者：给自己的产品准备一个公开状态页和告警后台。
+- 小团队：用低成本方式监控网站、证书、域名和关键 HTTP 服务。
+- Cloudflare 用户：希望直接跑在 Workers、Pages 和 D1 上，不额外维护服务器。
+
+不适合需要复杂探针网络、企业级 SLO 报表、值班排班和多租户权限的大型团队。
+
 ## 功能特性
 
 - 多站点 HTTP/HTTPS 监控，支持 GET/POST、自定义 Header、请求 Body 和关键词校验。
 - SSL 证书与域名到期检测，支持独立开关和提前提醒阈值。
 - 支持企业微信、飞书、钉钉、自定义 Webhook、Telegram 和 Email 告警。
 - 告警模板可配置，恢复通知和异常通知分离。
-- 公开状态页支持标签分组、公告展示和自定义 Logo。
+- 公开状态页支持标签分组、事件公告、计划维护和自定义 Logo。
 - 管理后台支持批量操作、拖拽排序、配置导入导出和健康检查。
 - 管理接口使用登录会话令牌，避免前端长期保存明文口令。
 - Worker 和 Pages 代理支持 `ALLOWED_ORIGIN`，可收紧跨域来源。
 - GitHub Actions 自动部署 Worker 和 Pages。
+
+## 快速了解
+
+| 问题 | 回答 |
+|---|---|
+| 是否需要服务器 | 不需要，部署到 Cloudflare Workers、Pages 和 D1 |
+| 是否需要数据库 | 需要 Cloudflare D1 |
+| 是否支持公开状态页 | 支持 |
+| 是否支持后台管理 | 支持，路径为 `/admin` |
+| 是否支持告警 | 支持企业微信、飞书、钉钉、Webhook、Telegram、Email |
+| 是否适合国内用户 | 前端资源本地打包，通知渠道优先推荐企业微信、飞书、钉钉 |
+| 在线 Demo | [https://uptime.nianshu2022.cn](https://uptime.nianshu2022.cn) |
+
+## 在线演示
+
+- 状态页：[https://uptime.nianshu2022.cn](https://uptime.nianshu2022.cn)
+- 管理后台：[https://uptime.nianshu2022.cn/admin](https://uptime.nianshu2022.cn/admin)
+- 演示密码：`Qwer1234`
+
+演示密码仅用于公开 Demo，请不要作为自己的生产环境管理口令。
 
 ## 界面预览
 
@@ -266,7 +295,7 @@ npm run dev
 访问：
 
 - 状态页：`http://localhost:5173/`
-- 管理后台：`http://localhost:5173/admin.html`
+- 管理后台：`http://localhost:5173/admin`
 - Worker：`http://127.0.0.1:8787`
 
 ## 国内访问说明
@@ -341,7 +370,7 @@ Uptime-Monitor/
 │   ├── public/
 │   │   └── _worker.js
 │   ├── index.html
-│   ├── admin.html
+│   ├── src/
 │   ├── vite.config.js
 │   └── package.json
 ├── worker/
@@ -351,6 +380,8 @@ Uptime-Monitor/
 │   └── package.json
 ├── .github/workflows/
 │   └── deploy.yml
+├── docs/
+│   └── LAUNCH.md
 ├── README.md
 ├── README.en.md
 └── LICENSE

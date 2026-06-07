@@ -3,7 +3,7 @@
  *
  * 处理所有请求：
  *  - /api/* → 代理到后端 Worker（WORKER_URL 环境变量）
- *  - 其他   → 服务静态资源（index.html / admin.html）
+ *  - 其他   → 服务静态资源和 SPA 路由
  *
  * 在 Cloudflare Pages → Settings → Environment variables 中设置：
  *   WORKER_URL = https://uptime-worker.<your-account-id>.workers.dev

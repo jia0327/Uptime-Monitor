@@ -6,17 +6,46 @@ Uptime Monitor is a lightweight website monitoring system built on Cloudflare Wo
 
 The project can run within Cloudflare's free tier and does not require a self-hosted server. The frontend uses bundled fonts and icons instead of runtime Google Fonts or icon CDN dependencies, making it friendlier for users in mainland China.
 
+## Who It Is For
+
+- Personal site owners who want to monitor blogs, docs, APIs, image hosts, proxies, or small services.
+- Indie developers who need a public status page and alerting dashboard for their own products.
+- Small teams that need low-cost monitoring for websites, certificates, domains, and key HTTP endpoints.
+- Cloudflare users who prefer Workers, Pages, and D1 over maintaining a server.
+
+It is not meant to replace large observability platforms with distributed probes, advanced SLO reporting, on-call scheduling, or multi-tenant permission systems.
+
 ## Features
 
 - HTTP/HTTPS monitoring for multiple sites, with GET/POST, custom headers, request bodies, and keyword checks.
 - SSL certificate and domain expiration monitoring with independent toggles and alert thresholds.
 - Notifications through WeCom, Feishu, DingTalk, custom Webhook, Telegram, and Email.
 - Configurable alert templates with separate incident and recovery messages.
-- Public status page with tag grouping, announcements, and custom logo support.
+- Public status page with tag grouping, incidents, maintenance windows, and custom logo support.
 - Admin dashboard with bulk actions, drag-and-drop sorting, JSON import/export, and health checks.
 - Session-based admin authentication so the frontend does not keep a plaintext password.
 - `ALLOWED_ORIGIN` support for Worker and Pages proxy CORS hardening.
 - GitHub Actions deployment for both Worker and Pages.
+
+## Quick Facts
+
+| Question | Answer |
+|---|---|
+| Does it need a server | No, it runs on Cloudflare Workers, Pages, and D1 |
+| Does it need a database | Yes, Cloudflare D1 |
+| Public status page | Yes |
+| Admin dashboard | Yes, available at `/admin` |
+| Notification channels | WeCom, Feishu, DingTalk, Webhook, Telegram, Email |
+| Mainland China friendliness | Frontend assets are bundled locally; WeCom, Feishu, and DingTalk are recommended first |
+| Online demo | [https://uptime.nianshu2022.cn](https://uptime.nianshu2022.cn) |
+
+## Online Demo
+
+- Status page: [https://uptime.nianshu2022.cn](https://uptime.nianshu2022.cn)
+- Admin dashboard: [https://uptime.nianshu2022.cn/admin](https://uptime.nianshu2022.cn/admin)
+- Demo password: `Qwer1234`
+
+The demo password is only for the public demo. Do not use it as your production admin secret.
 
 ## Screenshots
 
@@ -266,7 +295,7 @@ npm run dev
 Open:
 
 - Status page: `http://localhost:5173/`
-- Admin dashboard: `http://localhost:5173/admin.html`
+- Admin dashboard: `http://localhost:5173/admin`
 - Worker: `http://127.0.0.1:8787`
 
 ## Mainland China Access Notes
@@ -341,7 +370,7 @@ Uptime-Monitor/
 │   ├── public/
 │   │   └── _worker.js
 │   ├── index.html
-│   ├── admin.html
+│   ├── src/
 │   ├── vite.config.js
 │   └── package.json
 ├── worker/
@@ -351,6 +380,8 @@ Uptime-Monitor/
 │   └── package.json
 ├── .github/workflows/
 │   └── deploy.yml
+├── docs/
+│   └── LAUNCH.md
 ├── README.md
 ├── README.en.md
 └── LICENSE
