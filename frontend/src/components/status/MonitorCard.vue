@@ -1,5 +1,5 @@
 <template>
-  <div class="glass-card monitor-card rounded-xl px-5 py-4 cursor-default group"
+  <div class="glass-card monitor-card rounded-xl px-5 py-3.5 cursor-default group"
     :class="[
       monitor.paused ? 'opacity-50 monitor-status-paused' : '',
       monitor.status === 'UP' && !monitor.paused ? 'monitor-status-up' : '',
@@ -8,7 +8,7 @@
     ]"
     :style="{ animationDelay: (index * 0.06) + 's' }">
 
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-3">
           <div class="relative shrink-0">
@@ -30,10 +30,14 @@
             <svg class="w-2.5 h-2.5 opacity-70 group-hover/link:opacity-100 transition-opacity duration-200 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
           </a>
           <span class="text-[10px] sm:text-[11px] font-mono text-slate-400 dark:text-slate-600">{{ formatDate(monitor.last_check) }}</span>
+          <span v-if="monitor.cert_expiry" class="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] sm:text-[11px] font-mono border" :class="getExpiryClass(monitor.cert_expiry)">
+            <svg class="w-2.5 h-2.5 sm:w-3 sm:h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
+            SSL {{ formatExpiry(monitor.cert_expiry) }}
+          </span>
         </div>
       </div>
 
-      <div class="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end monitor-meta">
+      <div class="flex shrink-0 flex-wrap items-center gap-2 md:justify-end monitor-meta">
         <span v-if="monitor.paused" class="inline-flex min-w-[64px] justify-center px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700">暂停</span>
         <span v-else-if="monitor.status === 'UP'" class="inline-flex min-w-[64px] justify-center px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/20">在线</span>
         <span v-else-if="monitor.status === 'DOWN'" class="inline-flex min-w-[64px] justify-center px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border-red-200 dark:border-red-500/25">异常</span>
@@ -46,21 +50,11 @@
         </div>
 
         <div v-if="monitor.uptime_24h != null && !monitor.paused" class="px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-mono font-bold border"
-          :class="monitor.uptime_24h >= 99.9 ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/8 border-emerald-200 dark:border-emerald-500/20' : monitor.uptime_24h >= 95 ? 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-500/8 border-yellow-200 dark:border-yellow-500/20' : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/8 border-red-200 dark:border-red-500/20'">
+          :class="monitor.uptime_24h >= 99.9 ? 'text-emerald-600 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20' : monitor.uptime_24h >= 95 ? 'text-yellow-600 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-400/10 border-yellow-200 dark:border-yellow-400/20' : 'text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20'">
           24h {{ monitor.uptime_24h }}%
         </div>
-      </div>
-    </div>
 
-    <div v-if="monitor.cert_expiry || (sparkline && !monitor.paused)" class="mt-4 flex flex-col gap-3 border-t border-slate-200/70 pt-3 dark:border-slate-700/50 sm:flex-row sm:items-center sm:justify-between">
-      <div v-if="monitor.cert_expiry" class="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] sm:text-[11px] font-mono border w-fit" :class="getExpiryClass(monitor.cert_expiry)">
-        <svg class="w-2.5 h-2.5 sm:w-3 sm:h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
-        SSL {{ formatExpiry(monitor.cert_expiry) }}
-      </div>
-
-      <div v-if="sparkline && !monitor.paused" class="sparkline-wrap flex items-center gap-2 shrink-0 sm:ml-auto">
-        <span class="text-[10px] text-slate-400 dark:text-slate-600">延迟趋势</span>
-        <svg class="w-[92px] sm:w-[110px] h-[22px] sm:h-[26px]" :class="monitor.status === 'DOWN' ? 'text-red-500' : monitor.status === 'RETRYING' ? 'text-yellow-500' : 'text-emerald-500'" viewBox="0 0 120 28" preserveAspectRatio="none">
+        <svg v-if="sparkline && !monitor.paused" class="sparkline-wrap hidden lg:block w-[92px] h-[26px]" :class="monitor.status === 'DOWN' ? 'text-red-500' : monitor.status === 'RETRYING' ? 'text-yellow-500' : 'text-emerald-500'" viewBox="0 0 120 28" preserveAspectRatio="none" aria-label="延迟趋势">
           <path :d="sparkline.area" class="sparkline-area" fill="currentColor"/>
           <path :d="sparkline.line" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
           <circle :cx="sparkline.dot.x" :cy="sparkline.dot.y" r="2.5" fill="currentColor" opacity="0.9"/>

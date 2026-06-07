@@ -97,8 +97,8 @@ export const formatExpiry = (dateStr) => {
  * 延迟颜色分级
  */
 export const latencyClass = (ms) => {
-    if (ms < 100) return 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/8 border-emerald-200 dark:border-emerald-500/20';
-    if (ms < 300) return 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-500/8 border-sky-200 dark:border-sky-500/20';
-    if (ms < 800) return 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-500/8 border-yellow-200 dark:border-yellow-500/20';
-    return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/8 border-red-200 dark:border-red-500/20';
+    if (ms < 100) return 'text-emerald-600 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20';
+    if (ms < 300) return 'text-sky-600 dark:text-sky-300 bg-sky-50 dark:bg-sky-500/10 border-sky-200 dark:border-sky-500/20';
+    if (ms < 800) return 'text-yellow-600 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-400/10 border-yellow-200 dark:border-yellow-400/20';
+    return 'text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20';
 };

@@ -41,7 +41,7 @@
       </div>
 
       <!-- 错误提示 -->
-      <div v-if="error" class="mb-6 glass rounded-xl p-4 flex items-center gap-3 border-l-4 border-orange-500 fade-up">
+      <div v-if="error" class="mb-6 glass rounded-xl p-4 flex items-center gap-3 border border-orange-300 dark:border-orange-500/40 bg-orange-50/80 dark:bg-orange-500/10 fade-up">
         <i class="fas fa-exclamation-circle text-orange-400 shrink-0"></i>
         <p class="text-sm text-orange-300 flex-1">{{ error }}</p>
         <button @click="fetchMonitors" class="text-xs px-3 py-1.5 rounded-lg bg-orange-500/15 text-orange-400 hover:bg-orange-500/25 transition-colors font-medium cursor-pointer">重试</button>
@@ -50,26 +50,15 @@
       <!-- 统计概览 -->
       <StatsOverview v-if="isAuthenticated && monitors.length > 0" :stats="stats" />
 
-      <div v-if="isAuthenticated && health" class="mb-6 grid grid-cols-2 md:grid-cols-5 gap-2 fade-up">
-        <div class="glass rounded-xl px-4 py-3">
-          <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">D1 Logs</p>
-          <p class="text-lg font-mono font-bold text-slate-900 dark:text-white">{{ health.logs }}</p>
-        </div>
-        <div class="glass rounded-xl px-4 py-3">
-          <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Channels</p>
-          <p class="text-lg font-mono font-bold text-emerald-500">{{ health.enabled_channels }}</p>
-        </div>
-        <div class="glass rounded-xl px-4 py-3">
-          <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Daily</p>
-          <p class="text-xs font-mono font-semibold text-slate-600 dark:text-slate-300 truncate">{{ health.latest_daily_uptime || '-' }}</p>
-        </div>
-        <div class="glass rounded-xl px-4 py-3">
-          <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Last Log</p>
-          <p class="text-xs font-mono font-semibold text-slate-600 dark:text-slate-300 truncate">{{ formatDateFull(health.latest_log_at) }}</p>
-        </div>
-        <button @click="fetchHealth" class="glass rounded-xl px-4 py-3 text-left hover:border-green-500/40 transition cursor-pointer">
-          <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Self Check</p>
-          <p class="text-sm font-semibold" :class="health.ok ? 'text-emerald-500' : 'text-red-400'">{{ health.ok ? '正常' : '异常' }}</p>
+      <div v-if="isAuthenticated && health" class="mb-6 glass rounded-xl px-4 py-3 fade-up flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+        <span class="font-semibold text-slate-500 dark:text-slate-400">系统状态</span>
+        <span class="font-mono text-slate-600 dark:text-slate-300">D1 {{ health.logs }}</span>
+        <span class="font-mono text-slate-600 dark:text-slate-300">Channels {{ health.enabled_channels }}</span>
+        <span class="font-mono text-slate-600 dark:text-slate-300">Daily {{ health.latest_daily_uptime || '-' }}</span>
+        <span class="font-mono text-slate-600 dark:text-slate-300">Last {{ formatDateFull(health.latest_log_at) }}</span>
+        <button @click="fetchHealth" class="ml-auto flex items-center gap-1.5 rounded-lg px-2 py-1 font-semibold transition cursor-pointer" :class="health.ok ? 'text-emerald-500 hover:bg-emerald-500/10' : 'text-red-400 hover:bg-red-500/10'">
+          <i class="fas" :class="health.ok ? 'fa-check-circle' : 'fa-exclamation-circle'"></i>
+          {{ health.ok ? '自检正常' : '自检异常' }}
         </button>
       </div>
 

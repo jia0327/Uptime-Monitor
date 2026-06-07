@@ -2,7 +2,7 @@
   <div class="mb-6 fade-up">
     <!-- 状态横幅 -->
     <div v-if="!error"
-      class="hero-banner relative overflow-hidden rounded-2xl p-6 md:p-7 border"
+      class="hero-banner relative overflow-hidden rounded-2xl p-5 md:p-6 border"
       :class="cfg.wrapClass">
 
       <!-- 背景渐变 -->
@@ -10,8 +10,8 @@
 
       <div class="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <!-- 左侧：图标 + 文字 -->
-        <div class="flex items-start gap-5">
-          <div class="hero-icon w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border" :class="cfg.iconWrapClass">
+        <div class="flex items-start gap-4">
+          <div class="hero-icon w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border" :class="cfg.iconWrapClass">
             <!-- shield：所有正常 -->
             <svg v-if="cfg.icon === 'shield'" class="w-6 h-6" :class="cfg.iconColor" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/>
@@ -26,7 +26,7 @@
             </svg>
           </div>
           <div>
-            <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-1">{{ cfg.title }}</h1>
+            <h1 class="text-xl md:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-1">{{ cfg.title }}</h1>
             <p class="text-sm" :class="cfg.subtitleColor">{{ cfg.subtitle }}</p>
           </div>
         </div>
@@ -44,7 +44,7 @@
       </div>
 
       <!-- 底部统计（仅全部正常时显示） -->
-      <div v-if="allUp && !hasRetrying" class="relative mt-6 pt-5 border-t border-emerald-200/70 dark:border-emerald-500/10 grid grid-cols-3 gap-4">
+      <div v-if="allUp && !hasRetrying" class="relative mt-5 pt-4 border-t border-emerald-200/70 dark:border-emerald-500/10 grid grid-cols-3 gap-4">
         <div>
           <p class="text-[11px] text-slate-500 dark:text-slate-500 mb-1">监控项</p>
           <p class="text-2xl font-bold text-slate-900 dark:text-white font-mono">{{ activeMonitors.length }}</p>

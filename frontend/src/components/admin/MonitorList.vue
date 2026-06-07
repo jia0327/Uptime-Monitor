@@ -87,16 +87,29 @@
           </div>
         </div>
         <div class="flex flex-wrap items-center justify-end gap-0.5 sm:gap-1 w-full sm:w-auto border-t sm:border-t-0 border-slate-100 dark:border-white/5 pt-2 sm:pt-0 mt-1 sm:mt-0">
-          <button @click="$emit('force-check', m)" class="p-2 text-slate-500 hover:text-green-500 hover:bg-green-500/10 rounded-lg transition-colors cursor-pointer" :disabled="m._checking">
+          <button @click="$emit('force-check', m)" class="p-2 text-slate-500 hover:text-green-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer disabled:opacity-50" :disabled="m._checking" title="立即检查">
             <i class="fas fa-sync-alt text-sm" :class="{ 'fa-spin text-green-400': m._checking }"></i>
           </button>
-          <button @click="$emit('toggle-pause', m)" class="p-2 rounded-lg transition-colors cursor-pointer" :class="m.paused ? 'text-green-500 hover:bg-green-500/10' : 'text-slate-400 dark:text-slate-500 hover:text-yellow-500 hover:bg-yellow-500/10'">
+          <button @click="$emit('toggle-pause', m)" class="p-2 rounded-lg transition-colors cursor-pointer" :class="m.paused ? 'text-green-500 hover:bg-slate-100 dark:hover:bg-slate-800' : 'text-slate-400 dark:text-slate-500 hover:text-yellow-500 hover:bg-slate-100 dark:hover:bg-slate-800'" :title="m.paused ? '恢复监控' : '暂停监控'">
             <i :class="m.paused ? 'fas fa-play' : 'fas fa-pause'" class="text-sm"></i>
           </button>
-          <button @click="$emit('open-config', m)" class="p-2 text-slate-500 hover:text-purple-500 hover:bg-purple-500/10 rounded-lg transition-colors cursor-pointer"><i class="fas fa-sliders-h text-sm"></i></button>
-          <button @click="$emit('view-logs', m)" class="p-2 text-slate-500 hover:text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors cursor-pointer"><i class="fas fa-list-ul text-sm"></i></button>
-          <button @click="$emit('clone', m)" class="p-2 text-slate-500 hover:text-indigo-500 hover:bg-indigo-500/10 rounded-lg transition-colors cursor-pointer"><i class="far fa-copy text-sm"></i></button>
-          <button @click="$emit('delete', m)" class="p-2 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"><i class="far fa-trash-alt text-sm"></i></button>
+          <button @click="$emit('open-config', m)" class="p-2 text-slate-500 hover:text-purple-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer" title="配置监控"><i class="fas fa-sliders-h text-sm"></i></button>
+          <details class="relative">
+            <summary class="list-none p-2 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-500/10 rounded-lg transition-colors cursor-pointer" title="更多操作">
+              <i class="fas fa-ellipsis-h text-sm"></i>
+            </summary>
+            <div class="absolute right-0 top-full z-20 mt-1 w-36 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-xs shadow-lg dark:border-slate-700 dark:bg-slate-900">
+              <button @click="$emit('view-logs', m)" class="w-full px-3 py-2 text-left text-slate-600 hover:bg-slate-100 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-blue-400 cursor-pointer">
+                <i class="fas fa-list-ul w-4"></i> 查看日志
+              </button>
+              <button @click="$emit('clone', m)" class="w-full px-3 py-2 text-left text-slate-600 hover:bg-slate-100 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-indigo-400 cursor-pointer">
+                <i class="far fa-copy w-4"></i> 复制监控
+              </button>
+              <button @click="$emit('delete', m)" class="w-full px-3 py-2 text-left text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 cursor-pointer">
+                <i class="far fa-trash-alt w-4"></i> 删除
+              </button>
+            </div>
+          </details>
         </div>
       </div>
     </div>
