@@ -94,6 +94,27 @@ npx wrangler d1 list
 
 已有数据库升级时，请重新执行 `worker/schema.sql`。其中 `CREATE INDEX IF NOT EXISTS` 会补齐新增索引，不会重复创建。
 
+## 部署前检查清单
+
+上线前请确认下面 4 项都已完成：
+
+- 远程 D1 已执行 `worker/schema.sql`。
+- Worker 已绑定 D1，且绑定名是 `DB`。
+- Worker 已配置 `ADMIN_API_KEY`。
+- Pages 已配置 `WORKER_URL`，并在保存后重新部署前端。
+
+如果少了最后一步，登录接口会返回：
+
+```json
+{"error":"WORKER_URL environment variable is not set"}
+```
+
+如果少了 D1 初始化，公开接口或登录后的管理接口可能返回：
+
+```json
+{"error":"D1_ERROR: no such table: monitors: SQLITE_ERROR"}
+```
+
 ## 手动部署
 
 ### 1. 配置并部署 Worker
@@ -161,6 +182,14 @@ npx wrangler pages deploy dist --project-name=uptime-monitor
 npx wrangler pages deploy dist --project-name=uptime-monitor
 ```
 
+验证代理是否生效：
+
+```bash
+curl https://你的-pages域名.pages.dev/api/monitors/public
+```
+
+正常情况下会返回 `[]` 或监控列表。如果返回 `WORKER_URL environment variable is not set`，说明 Pages 环境变量未配置或配置后没有重新部署。
+
 ## GitHub Actions 自动部署
 
 Fork 本仓库后，在 GitHub 仓库的 `Settings` -> `Secrets and variables` -> `Actions` 中配置以下内容。
@@ -195,7 +224,26 @@ Cloudflare API Token 至少需要这些权限：
 
 配置完成后，推送到 `main` 分支或在 Actions 页面手动运行 `Deploy Uptime Monitor` 工作流。
 
-首次部署完成后，还需要在 Cloudflare Pages 项目中添加 `WORKER_URL` 环境变量，然后重新部署一次前端。
+首次部署完成后，还必须在 Cloudflare Pages 项目中添加 `WORKER_URL` 环境变量，然后重新部署一次前端。GitHub Secrets 里的 `D1_DATABASE_ID` 只用于 Worker 绑定，不会自动给 Pages 配置后端地址。
+
+操作路径：
+
+`Cloudflare Dashboard` -> `Workers & Pages` -> `uptime-monitor` -> `Settings` -> `Environment variables`
+
+添加：
+
+| 变量 | 值 |
+|---|---|
+| `WORKER_URL` | Worker 地址，例如 `https://uptime-worker.example.workers.dev` |
+| `ALLOWED_ORIGIN` | Pages 地址，例如 `https://uptime-monitor.pages.dev` |
+
+保存后回到 GitHub Actions 重新运行一次部署，或本地执行：
+
+```bash
+cd frontend
+npm run build
+npx wrangler pages deploy dist --project-name=uptime-monitor
+```
 
 ## 本地开发
 
@@ -258,6 +306,32 @@ npm run dev
 ### `/api/monitors/public` 返回前端页面
 
 说明 Pages 代理没有拿到 Worker 地址。请在 Cloudflare Pages 环境变量中配置 `WORKER_URL`，保存后重新部署前端。
+
+### 登录接口返回 500，并提示 WORKER_URL environment variable is not set
+
+这是 Pages 项目缺少 `WORKER_URL`。请在 Cloudflare Pages 项目环境变量中添加：
+
+```text
+WORKER_URL=https://你的 Worker 地址
+```
+
+保存后必须重新部署 Pages，否则新变量不会生效。
+
+### 接口返回 D1_ERROR: no such table: monitors
+
+说明当前 Worker 绑定的 D1 数据库还没有初始化表结构，或 `D1_DATABASE_ID` 绑定到了另一个空库。
+
+先确认 D1：
+
+```bash
+npx wrangler d1 list
+```
+
+然后初始化远程数据库：
+
+```bash
+npx wrangler d1 execute uptime-db --remote --file=worker/schema.sql
+```
 
 ## 目录结构
 

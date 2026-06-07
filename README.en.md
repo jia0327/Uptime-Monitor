@@ -94,6 +94,27 @@ npx wrangler d1 list
 
 For existing databases, run `worker/schema.sql` again. The `CREATE INDEX IF NOT EXISTS` statements will add missing indexes without recreating existing ones.
 
+## Pre-deployment Checklist
+
+Before going live, make sure all 4 items are complete:
+
+- The remote D1 database has been initialized with `worker/schema.sql`.
+- The Worker has a D1 binding named `DB`.
+- The Worker has `ADMIN_API_KEY` configured.
+- Pages has `WORKER_URL` configured and the frontend has been redeployed after saving it.
+
+If the last step is missing, the login API returns:
+
+```json
+{"error":"WORKER_URL environment variable is not set"}
+```
+
+If the D1 schema is missing, public APIs or authenticated admin APIs may return:
+
+```json
+{"error":"D1_ERROR: no such table: monitors: SQLITE_ERROR"}
+```
+
 ## Manual Deployment
 
 ### 1. Configure and deploy the Worker
@@ -161,6 +182,14 @@ Save the variables and redeploy the frontend:
 npx wrangler pages deploy dist --project-name=uptime-monitor
 ```
 
+Verify the proxy:
+
+```bash
+curl https://your-pages-domain.pages.dev/api/monitors/public
+```
+
+It should return `[]` or a monitor list. If it returns `WORKER_URL environment variable is not set`, the Pages environment variable is missing or the frontend was not redeployed after saving it.
+
 ## GitHub Actions Deployment
 
 After forking this repository, configure the following values in GitHub repository `Settings` -> `Secrets and variables` -> `Actions`.
@@ -195,7 +224,26 @@ The Cloudflare API Token should include at least:
 
 After configuration, push to the `main` branch or manually run the `Deploy Uptime Monitor` workflow in the Actions tab.
 
-After the first deployment, add `WORKER_URL` to the Cloudflare Pages project environment variables and redeploy the frontend once.
+After the first deployment, you must add `WORKER_URL` to the Cloudflare Pages project environment variables and redeploy the frontend once. `D1_DATABASE_ID` in GitHub Secrets is only used for the Worker binding; it does not configure the backend URL for Pages.
+
+Open:
+
+`Cloudflare Dashboard` -> `Workers & Pages` -> `uptime-monitor` -> `Settings` -> `Environment variables`
+
+Add:
+
+| Variable | Value |
+|---|---|
+| `WORKER_URL` | Worker URL, for example `https://uptime-worker.example.workers.dev` |
+| `ALLOWED_ORIGIN` | Pages URL, for example `https://uptime-monitor.pages.dev` |
+
+After saving, rerun the GitHub Actions deployment, or run locally:
+
+```bash
+cd frontend
+npm run build
+npx wrangler pages deploy dist --project-name=uptime-monitor
+```
 
 ## Local Development
 
@@ -258,6 +306,32 @@ Set `ADMIN_API_KEY`. The old `ADMIN_PASSWORD` variable is still supported, but `
 ### `/api/monitors/public` returns the frontend page
 
 The Pages proxy does not have the Worker URL. Set `WORKER_URL` in Cloudflare Pages environment variables, save it, and redeploy the frontend.
+
+### Login API returns 500 with WORKER_URL environment variable is not set
+
+The Pages project is missing `WORKER_URL`. Add this environment variable to the Cloudflare Pages project:
+
+```text
+WORKER_URL=https://your Worker URL
+```
+
+After saving it, redeploy Pages. New variables do not affect the existing deployment until redeployed.
+
+### API returns D1_ERROR: no such table: monitors
+
+The Worker is connected to a D1 database without the required schema, or `D1_DATABASE_ID` points to a different empty database.
+
+Check D1 databases:
+
+```bash
+npx wrangler d1 list
+```
+
+Then initialize the remote database:
+
+```bash
+npx wrangler d1 execute uptime-db --remote --file=worker/schema.sql
+```
 
 ## Project Structure
 
