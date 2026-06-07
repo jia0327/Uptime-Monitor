@@ -32,7 +32,7 @@
           <span class="text-[10px] sm:text-[11px] font-mono text-slate-400 dark:text-slate-600">{{ formatDate(monitor.last_check) }}</span>
           <span v-if="monitor.cert_expiry" class="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] sm:text-[11px] font-mono border" :class="getExpiryClass(monitor.cert_expiry)">
             <svg class="w-2.5 h-2.5 sm:w-3 sm:h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
-            SSL {{ formatExpiry(monitor.cert_expiry) }}
+            SSL {{ formatExpiry(monitor.cert_expiry) }} · {{ formatExpiryDate(monitor.cert_expiry) }}
           </span>
         </div>
       </div>
@@ -68,7 +68,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import { formatDate, getExpiryClass, formatExpiry, latencyClass } from '../../utils/format';
+import { formatDate, getExpiryClass, formatExpiry, formatExpiryDate, latencyClass } from '../../utils/format';
 import UptimeBar from './UptimeBar.vue';
 
 const props = defineProps({

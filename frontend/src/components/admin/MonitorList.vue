@@ -79,7 +79,7 @@
           </div>
           <div class="flex flex-col w-[calc(50%-6px)] sm:w-auto">
             <span class="text-[9px] uppercase tracking-wider text-slate-500 dark:text-slate-600 font-bold">SSL</span>
-            <span class="text-[11px] font-mono font-medium" :class="getExpiryClassAdmin(m.cert_expiry)">{{ m.cert_expiry ? getDaysRemaining(m.cert_expiry) + 'd' : 'OK' }}</span>
+            <span class="text-[11px] font-mono font-medium" :class="getExpiryClassAdmin(m.cert_expiry)">{{ m.cert_expiry ? getDaysRemaining(m.cert_expiry) + 'd · ' + formatExpiryDate(m.cert_expiry) : '-' }}</span>
           </div>
           <div class="flex flex-col w-[calc(50%-6px)] sm:w-auto">
             <span class="text-[9px] uppercase tracking-wider text-slate-500 dark:text-slate-600 font-bold">Domain</span>
@@ -119,7 +119,7 @@
 <script setup>
 import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import Sortable from 'sortablejs';
-import { formatDateFull, getDaysRemaining, getExpiryClassAdmin } from '../../utils/format';
+import { formatDateFull, formatExpiryDate, getDaysRemaining, getExpiryClassAdmin } from '../../utils/format';
 
 const props = defineProps({
     monitors: Array, filteredMonitors: Array, allTags: Array,

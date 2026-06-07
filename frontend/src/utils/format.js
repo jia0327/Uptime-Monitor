@@ -61,6 +61,24 @@ export const getDaysRemaining = (dateStr) => {
 };
 
 /**
+ * 到期日期显示
+ */
+export const formatExpiryDate = (dateStr) => {
+    const s = normalizeDate(dateStr);
+    if (!s) return '-';
+    const date = new Date(s);
+    if (isNaN(date.getTime())) return '-';
+    try {
+        return date.toLocaleDateString('zh-CN', {
+            timeZone: 'Asia/Shanghai',
+            year: 'numeric', month: '2-digit', day: '2-digit',
+        });
+    } catch {
+        return '-';
+    }
+};
+
+/**
  * 到期时间 CSS 类
  */
 export const getExpiryClass = (dateStr) => {
