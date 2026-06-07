@@ -31,8 +31,8 @@
 
     <!-- 监控卡片列表 -->
     <div v-for="m in filteredMonitors" :key="m.id"
-      class="glass rounded-xl px-5 py-4 card-hover flex flex-col md:flex-row md:items-center md:justify-between gap-4 cursor-default group"
-      :class="m.paused ? 'opacity-50' : ''">
+      class="relative glass rounded-xl px-5 py-4 card-hover flex flex-col md:flex-row md:items-center md:justify-between gap-4 cursor-default group"
+      :class="[m.paused ? 'opacity-50' : '', openMenuId === m.id ? 'z-40' : 'z-0']">
       <div class="flex items-center gap-3 min-w-0">
         <div class="drag-handle shrink-0 cursor-grab active:cursor-grabbing text-slate-600 hover:text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" title="拖拽排序">
           <i class="fas fa-grip-vertical text-sm"></i>
@@ -94,22 +94,22 @@
             <i :class="m.paused ? 'fas fa-play' : 'fas fa-pause'" class="text-sm"></i>
           </button>
           <button @click="$emit('open-config', m)" class="p-2 text-slate-500 hover:text-purple-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer" title="配置监控"><i class="fas fa-sliders-h text-sm"></i></button>
-          <details class="relative">
-            <summary class="list-none p-2 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-500/10 rounded-lg transition-colors cursor-pointer" title="更多操作">
+          <div class="relative">
+            <button type="button" @click.stop="toggleMore(m.id)" class="p-2 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-500/10 rounded-lg transition-colors cursor-pointer" title="更多操作" aria-label="更多操作" :aria-expanded="openMenuId === m.id">
               <i class="fas fa-ellipsis-h text-sm"></i>
-            </summary>
-            <div class="absolute right-0 top-full z-20 mt-1 w-36 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-xs shadow-lg dark:border-slate-700 dark:bg-slate-900">
-              <button @click="$emit('view-logs', m)" class="w-full px-3 py-2 text-left text-slate-600 hover:bg-slate-100 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-blue-400 cursor-pointer">
+            </button>
+            <div v-if="openMenuId === m.id" @click.stop data-more-menu class="absolute right-full top-1/2 z-50 mr-2 w-36 -translate-y-1/2 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-xs shadow-xl dark:border-slate-700 dark:bg-slate-900">
+              <button type="button" @click="runMore('view-logs', m)" class="w-full px-3 py-2 text-left text-slate-600 hover:bg-slate-100 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-blue-400 cursor-pointer">
                 <i class="fas fa-list-ul w-4"></i> 查看日志
               </button>
-              <button @click="$emit('clone', m)" class="w-full px-3 py-2 text-left text-slate-600 hover:bg-slate-100 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-indigo-400 cursor-pointer">
+              <button type="button" @click="runMore('clone', m)" class="w-full px-3 py-2 text-left text-slate-600 hover:bg-slate-100 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-indigo-400 cursor-pointer">
                 <i class="far fa-copy w-4"></i> 复制监控
               </button>
-              <button @click="$emit('delete', m)" class="w-full px-3 py-2 text-left text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 cursor-pointer">
+              <button type="button" @click="runMore('delete', m)" class="w-full px-3 py-2 text-left text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 cursor-pointer">
                 <i class="far fa-trash-alt w-4"></i> 删除
               </button>
             </div>
-          </details>
+          </div>
         </div>
       </div>
     </div>
@@ -117,7 +117,7 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick, onMounted } from 'vue';
+import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import Sortable from 'sortablejs';
 import { formatDateFull, getDaysRemaining, getExpiryClassAdmin } from '../../utils/format';
 
@@ -131,7 +131,21 @@ const emit = defineEmits([
 ]);
 
 const listRef = ref(null);
+const openMenuId = ref(null);
 let sortableInstance = null;
+
+const toggleMore = (id) => {
+    openMenuId.value = openMenuId.value === id ? null : id;
+};
+
+const closeMore = () => {
+    openMenuId.value = null;
+};
+
+const runMore = (eventName, monitor) => {
+    closeMore();
+    emit(eventName, monitor);
+};
 
 const toggleSelected = (id) => {
     const current = [...props.selectedIds];
@@ -169,5 +183,12 @@ const initSortable = () => {
 };
 
 watch(() => props.filteredMonitors.length, () => nextTick(initSortable));
-onMounted(() => nextTick(initSortable));
+onMounted(() => {
+    nextTick(initSortable);
+    window.addEventListener('click', closeMore);
+});
+onBeforeUnmount(() => {
+    window.removeEventListener('click', closeMore);
+    if (sortableInstance) sortableInstance.destroy();
+});
 </script>
