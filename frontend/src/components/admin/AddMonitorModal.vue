@@ -34,11 +34,11 @@
           <!-- 监测频率 -->
           <div>
             <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2"><i class="fas fa-clock text-cyan-400"></i> 监测频率</h4>
-            <div class="grid grid-cols-3 sm:grid-cols-7 gap-2">
-              <label v-for="opt in intervalOptions" :key="opt.value"
+            <div class="grid grid-cols-4 sm:grid-cols-7 gap-2">
+              <label v-for="opt in intervalOptions" :key="'interval-' + opt.value"
                 class="flex flex-col items-center justify-center py-2.5 rounded-xl border-2 cursor-pointer transition-all text-center"
                 :class="Number(newMonitor.interval) === opt.value ? (opt.value === 0 ? 'border-blue-500 bg-blue-900/20 text-blue-400' : 'border-green-500 bg-green-900/20 text-green-400') : 'border-slate-700 text-slate-400 hover:border-green-500/40'">
-                <input type="radio" :value="opt.value" v-model="newMonitor.interval" class="sr-only">
+                <input type="radio" :value="opt.value" v-model.number="newMonitor.interval" class="sr-only">
                 <span class="text-sm font-bold">{{ opt.label }}</span>
               </label>
             </div>

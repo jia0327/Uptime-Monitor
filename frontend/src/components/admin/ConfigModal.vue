@@ -10,7 +10,7 @@
           </div>
           <button @click="$emit('close')" class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"><i class="fas fa-times text-lg"></i></button>
         </div>
-        <div class="flex-1 overflow-y-auto p-6 space-y-6">
+        <div class="flex-1 min-h-0 overflow-y-auto p-6 space-y-6">
           <!-- 基础信息 -->
           <div>
             <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2"><i class="fas fa-edit text-green-500 text-[10px]"></i> 基础信息</h4>
@@ -39,7 +39,7 @@
             </div>
           </div>
           <!-- 功能开关 -->
-          <div>
+          <div v-if="!isBookmarkMode">
             <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">检测功能</h4>
             <div class="space-y-3">
               <label class="flex items-center justify-between p-3 rounded-lg bg-slate-900/50 cursor-pointer"><div class="flex items-center gap-2 text-sm text-slate-300"><i class="fas fa-lock text-blue-400 w-4"></i><span>SSL 证书到期检测</span></div><input type="checkbox" v-model="configForm.check_ssl" class="w-4 h-4 rounded accent-green-500"></label>
@@ -57,18 +57,19 @@
           <!-- 监测频率 -->
           <div>
             <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">监测频率</h4>
-            <div class="grid grid-cols-3 sm:grid-cols-7 gap-1.5">
-              <label v-for="opt in intervalOptions" :key="opt.value"
+            <div class="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
+              <label v-for="opt in intervalOptions" :key="'interval-' + opt.value"
                 class="flex flex-col items-center justify-center py-2 rounded-lg border-2 cursor-pointer transition-all text-center"
                 :class="Number(configForm.interval) === opt.value ? (opt.value === 0 ? 'border-blue-500 bg-blue-900/20 text-blue-400' : 'border-green-500 bg-green-900/20 text-green-400') : 'border-slate-700 text-slate-400 hover:border-green-500/40'">
-                <input type="radio" :value="opt.value" v-model="configForm.interval" class="sr-only"><span class="text-sm font-bold">{{ opt.label }}</span>
+                <input type="radio" :value="opt.value" v-model.number="configForm.interval" class="sr-only"><span class="text-sm font-bold">{{ opt.label }}</span>
               </label>
             </div>
+            <p v-if="isBookmarkMode" class="mt-2 text-xs text-blue-400/80"><i class="fas fa-bookmark mr-1"></i>书签模式：不发起检测，下方告警设置已隐藏</p>
           </div>
           <!-- 告警静默窗口 -->
-          <div>
+          <div v-if="!isBookmarkMode">
             <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">告警通知频率</h4>
-            <p class="text-xs text-slate-500 mb-4">同一问题在窗口时间内只发送一次告警。</p>
+            <p class="text-xs text-slate-500 mb-4">同一问题在选定时间内只发送一次告警，避免重复轰炸。下面三组分别对应不同类型的告警。</p>
             <div class="mb-5 pb-4 border-b border-slate-700/50">
               <div class="flex items-center gap-2 text-xs text-slate-400 mb-2"><i class="fas fa-exclamation-triangle text-orange-400 w-3"></i><span>错误率阈值告警</span></div>
               <div class="flex items-center justify-between bg-slate-900/50 p-3 rounded-lg border border-slate-700">
@@ -81,12 +82,13 @@
             </div>
             <div class="space-y-4">
               <div v-for="item in silenceItems" :key="item.key">
-                <div class="flex items-center gap-2 text-xs text-slate-400 mb-2"><i :class="item.icon + ' w-3'"></i><span>{{ item.label }}</span></div>
+                <div class="flex items-center gap-2 text-xs text-slate-400 mb-1"><i :class="item.icon + ' w-3'"></i><span>{{ item.label }}</span><span class="text-slate-600">· {{ item.desc }}</span></div>
                 <div class="grid grid-cols-5 gap-1.5">
-                  <label v-for="opt in silenceOptions" :key="opt.value"
+                  <label v-for="opt in silenceOptions" :key="item.key + '-' + opt.value"
                     class="flex flex-col items-center justify-center py-2 rounded-lg border-2 cursor-pointer transition-all text-center"
-                    :class="configForm[item.key] === opt.value ? 'border-green-500 bg-green-900/20 text-green-400' : 'border-slate-700 text-slate-400 hover:border-green-500/40'">
-                    <input type="radio" :value="opt.value" v-model="configForm[item.key]" class="sr-only"><span class="text-sm font-bold">{{ opt.label }}</span>
+                    :class="configForm[item.key] === opt.value ? 'border-green-500 bg-green-900/20 text-green-400' : 'border-slate-700 text-slate-400 hover:border-green-500/40'"
+                    :title="opt.hint">
+                    <input type="radio" :value="opt.value" v-model.number="configForm[item.key]" class="sr-only"><span class="text-sm font-bold">{{ opt.label }}</span>
                   </label>
                 </div>
               </div>
@@ -105,17 +107,33 @@
 </template>
 
 <script setup>
-import { MONITOR_INTERVAL_OPTIONS } from '../../utils/monitor';
+import { computed, watch } from 'vue';
+import { MONITOR_INTERVAL_OPTIONS, isBookmark } from '../../utils/monitor';
 
-defineProps({ configTarget: Object, configForm: Object, configSaving: Boolean });
+const props = defineProps({ configTarget: Object, configForm: Object, configSaving: Boolean });
 defineEmits(['close', 'save']);
 
 const intervalOptions = MONITOR_INTERVAL_OPTIONS;
+const isBookmarkMode = computed(() => isBookmark(props.configForm));
 
-const silenceOptions = [{ value: 1, label: '1h' }, { value: 4, label: '4h' }, { value: 12, label: '12h' }, { value: 24, label: '24h' }, { value: 72, label: '72h' }];
+watch(() => props.configForm?.interval, (val) => {
+  if (Number(val) === 0 && props.configForm) {
+    props.configForm.check_ssl = false;
+    props.configForm.check_domain = false;
+    props.configForm.alert_error_rate = 0;
+  }
+});
+
+const silenceOptions = [
+  { value: 1, label: '1h', hint: '1 小时' },
+  { value: 4, label: '4h', hint: '4 小时' },
+  { value: 12, label: '12h', hint: '12 小时' },
+  { value: 24, label: '24h', hint: '24 小时' },
+  { value: 72, label: '72h', hint: '72 小时' },
+];
 const silenceItems = [
-    { key: 'alert_silence_uptime', label: '可用性告警', icon: 'fas fa-heartbeat text-red-400' },
-    { key: 'alert_silence_ssl', label: 'SSL 证书告警', icon: 'fas fa-lock text-blue-400' },
-    { key: 'alert_silence_domain', label: '域名到期告警', icon: 'fas fa-globe text-green-400' },
+    { key: 'alert_silence_uptime', label: '可用性告警', desc: '服务宕机/恢复', icon: 'fas fa-heartbeat text-red-400' },
+    { key: 'alert_silence_ssl', label: 'SSL 证书告警', desc: '证书即将到期', icon: 'fas fa-lock text-blue-400' },
+    { key: 'alert_silence_domain', label: '域名到期告警', desc: '域名即将到期', icon: 'fas fa-globe text-green-400' },
 ];
 </script>
