@@ -34,14 +34,15 @@
           <!-- 监测频率 -->
           <div>
             <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2"><i class="fas fa-clock text-cyan-400"></i> 监测频率</h4>
-            <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
-              <label v-for="opt in [{value:60,label:'1 分钟'},{value:180,label:'3 分钟'},{value:300,label:'5 分钟'},{value:600,label:'10 分钟'},{value:900,label:'15 分钟'},{value:1800,label:'30 分钟'}]" :key="opt.value"
+            <div class="grid grid-cols-3 sm:grid-cols-7 gap-2">
+              <label v-for="opt in intervalOptions" :key="opt.value"
                 class="flex flex-col items-center justify-center py-2.5 rounded-xl border-2 cursor-pointer transition-all text-center"
-                :class="Number(newMonitor.interval) === opt.value ? 'border-green-500 bg-green-900/20 text-green-400' : 'border-slate-700 text-slate-400 hover:border-green-500/40'">
+                :class="Number(newMonitor.interval) === opt.value ? (opt.value === 0 ? 'border-blue-500 bg-blue-900/20 text-blue-400' : 'border-green-500 bg-green-900/20 text-green-400') : 'border-slate-700 text-slate-400 hover:border-green-500/40'">
                 <input type="radio" :value="opt.value" v-model="newMonitor.interval" class="sr-only">
                 <span class="text-sm font-bold">{{ opt.label }}</span>
               </label>
             </div>
+            <p v-if="isBookmarkMode" class="mt-2 text-xs text-blue-400/80"><i class="fas fa-bookmark mr-1"></i>不检测模式：仅作为书签展示，不会发起 HTTP 检测</p>
           </div>
           <!-- 高级选项 -->
           <div>
@@ -99,6 +100,17 @@
               </label>
             </div>
           </div>
+          <!-- 可见性 -->
+          <div>
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2"><i class="fas fa-eye-slash text-purple-400"></i> 可见性</h4>
+            <label class="flex items-center gap-3 p-4 rounded-xl border border-slate-700 hover:border-purple-500/50 cursor-pointer select-none transition-colors bg-slate-900/50">
+              <input type="checkbox" v-model="newMonitor.is_private" class="w-5 h-5 rounded accent-purple-500">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-purple-500/15 rounded-lg flex items-center justify-center"><i class="fas fa-lock text-purple-400 text-xs"></i></div>
+                <div><span class="text-sm font-medium text-slate-300">私密监控</span><p class="text-xs text-slate-500">公开状态页不显示链接，后台仍可查看</p></div>
+              </div>
+            </label>
+          </div>
         </div>
         <!-- 底部 -->
         <div class="px-8 py-5 border-t border-white/5 bg-slate-900/30 flex items-center justify-between">
@@ -108,7 +120,7 @@
             <button @click="$emit('submit')" :disabled="submitting" class="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer">
               <i v-if="submitting" class="fas fa-spinner fa-spin text-xs"></i>
               <i v-else class="fas fa-rocket text-xs"></i>
-              {{ submitting ? '添加中...' : '开始监控' }}
+              {{ submitting ? '添加中...' : (isBookmarkMode ? '添加书签' : '开始监控') }}
             </button>
           </div>
         </div>
@@ -118,6 +130,19 @@
 </template>
 
 <script setup>
-defineProps({ newMonitor: Object, submitting: Boolean });
+import { computed, watch } from 'vue';
+import { MONITOR_INTERVAL_OPTIONS, isBookmark } from '../../utils/monitor';
+
+const props = defineProps({ newMonitor: Object, submitting: Boolean });
 defineEmits(['close', 'submit']);
+
+const intervalOptions = MONITOR_INTERVAL_OPTIONS;
+const isBookmarkMode = computed(() => isBookmark(props.newMonitor));
+
+watch(() => props.newMonitor?.interval, (val) => {
+  if (Number(val) === 0 && props.newMonitor) {
+    props.newMonitor.check_ssl = false;
+    props.newMonitor.check_domain = false;
+  }
+});
 </script>

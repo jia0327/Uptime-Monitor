@@ -46,13 +46,21 @@
               <label class="flex items-center justify-between p-3 rounded-lg bg-slate-900/50 cursor-pointer"><div class="flex items-center gap-2 text-sm text-slate-300"><i class="fas fa-globe text-green-400 w-4"></i><span>域名到期检测</span></div><input type="checkbox" v-model="configForm.check_domain" class="w-4 h-4 rounded accent-green-500"></label>
             </div>
           </div>
+          <!-- 可见性 -->
+          <div>
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">可见性</h4>
+            <label class="flex items-center justify-between p-3 rounded-lg bg-slate-900/50 cursor-pointer">
+              <div class="flex items-center gap-2 text-sm text-slate-300"><i class="fas fa-lock text-purple-400 w-4"></i><div><span>私密监控</span><p class="text-xs text-slate-500 mt-0.5">公开状态页不显示链接</p></div></div>
+              <input type="checkbox" v-model="configForm.is_private" class="w-4 h-4 rounded accent-purple-500">
+            </label>
+          </div>
           <!-- 监测频率 -->
           <div>
             <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">监测频率</h4>
-            <div class="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-              <label v-for="opt in [{value:60,label:'1 min'},{value:180,label:'3 min'},{value:300,label:'5 min'},{value:600,label:'10 min'},{value:900,label:'15 min'},{value:1800,label:'30 min'}]" :key="opt.value"
+            <div class="grid grid-cols-3 sm:grid-cols-7 gap-1.5">
+              <label v-for="opt in intervalOptions" :key="opt.value"
                 class="flex flex-col items-center justify-center py-2 rounded-lg border-2 cursor-pointer transition-all text-center"
-                :class="Number(configForm.interval) === opt.value ? 'border-green-500 bg-green-900/20 text-green-400' : 'border-slate-700 text-slate-400 hover:border-green-500/40'">
+                :class="Number(configForm.interval) === opt.value ? (opt.value === 0 ? 'border-blue-500 bg-blue-900/20 text-blue-400' : 'border-green-500 bg-green-900/20 text-green-400') : 'border-slate-700 text-slate-400 hover:border-green-500/40'">
                 <input type="radio" :value="opt.value" v-model="configForm.interval" class="sr-only"><span class="text-sm font-bold">{{ opt.label }}</span>
               </label>
             </div>
@@ -97,8 +105,12 @@
 </template>
 
 <script setup>
+import { MONITOR_INTERVAL_OPTIONS } from '../../utils/monitor';
+
 defineProps({ configTarget: Object, configForm: Object, configSaving: Boolean });
 defineEmits(['close', 'save']);
+
+const intervalOptions = MONITOR_INTERVAL_OPTIONS;
 
 const silenceOptions = [{ value: 1, label: '1h' }, { value: 4, label: '4h' }, { value: 12, label: '12h' }, { value: 24, label: '24h' }, { value: 72, label: '72h' }];
 const silenceItems = [

@@ -102,7 +102,7 @@ const refreshing = ref(false);
 const incidents = ref([]);
 const siteSettings = ref({ site_title: 'Uptime Monitor', site_description: '', site_logo_url: '' });
 
-const activeMonitors = computed(() => monitors.value.filter(m => m.paused !== 1 && m.status !== 'PAUSED'));
+const activeMonitors = computed(() => monitors.value.filter(m => m.paused !== 1 && m.status !== 'PAUSED' && m.interval !== 0));
 const allUp = computed(() => activeMonitors.value.length > 0 && activeMonitors.value.every(m => m.status === 'UP'));
 const hasRetrying = computed(() => activeMonitors.value.some(m => m.status === 'RETRYING'));
 const hasDown = computed(() => activeMonitors.value.some(m => m.status === 'DOWN'));

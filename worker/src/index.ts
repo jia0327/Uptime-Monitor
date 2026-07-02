@@ -33,6 +33,7 @@ interface Monitor {
   last_alert_ssl: string | null;
   last_alert_domain: string | null;
   sort_order: number;             // 拖拽排序顺序
+  is_private: number;             // 私密监控 (1=公开页不显示链接)
   created_at: string;
 }
 
@@ -91,8 +92,15 @@ const MONITOR_COLUMNS = `
   retry_count, last_check, keyword, user_agent, tags, domain_expiry, cert_expiry,
   check_info_status, paused, check_ssl, check_domain, alert_silence_uptime,
   alert_silence_ssl, alert_silence_domain, alert_error_rate, last_alert_uptime,
-  last_alert_ssl, last_alert_domain, sort_order, created_at
+  last_alert_ssl, last_alert_domain, sort_order, is_private, created_at
 `;
+
+function sanitizePublicMonitor<T extends Record<string, unknown>>(monitor: T): T {
+  if (Number(monitor.is_private) === 1) {
+    return { ...monitor, url: null };
+  }
+  return monitor;
+}
 
 function getAllowedOrigins(env: Bindings): string[] {
   return (env.ALLOWED_ORIGIN || '')
@@ -267,9 +275,9 @@ app.get('/monitors', async (c) => {
 app.get('/monitors/public', async (c) => {
   try {
     const { results } = await c.env.DB.prepare(
-      'SELECT id, name, url, status, last_check, cert_expiry, domain_expiry, paused, tags FROM monitors ORDER BY sort_order ASC, created_at ASC'
-    ).all<Pick<Monitor, 'id' | 'name' | 'url' | 'status' | 'last_check' | 'cert_expiry' | 'domain_expiry' | 'paused' | 'tags'>>();
-    return c.json(results);
+      'SELECT id, name, url, status, last_check, cert_expiry, domain_expiry, paused, tags, interval, is_private FROM monitors ORDER BY sort_order ASC, created_at ASC'
+    ).all<Pick<Monitor, 'id' | 'name' | 'url' | 'status' | 'last_check' | 'cert_expiry' | 'domain_expiry' | 'paused' | 'tags' | 'interval' | 'is_private'>>();
+    return c.json(results.map(m => sanitizePublicMonitor(m as Record<string, unknown>)));
   } catch (e: unknown) {
     return c.json({ error: e instanceof Error ? e.message : 'Unknown error' }, 500);
   }
@@ -279,7 +287,7 @@ app.get('/monitors/public', async (c) => {
 app.get('/monitors/public/details', async (c) => {
   try {
     const { results: monitors } = await c.env.DB.prepare(
-      'SELECT id, name, url, status, last_check, cert_expiry, domain_expiry, paused, tags FROM monitors ORDER BY sort_order ASC, created_at ASC'
+      'SELECT id, name, url, status, last_check, cert_expiry, domain_expiry, paused, tags, interval, is_private FROM monitors ORDER BY sort_order ASC, created_at ASC'
     ).all();
     if (!monitors || monitors.length === 0) return c.json({ monitors: [] });
 
@@ -346,9 +354,9 @@ app.get('/monitors/public/details', async (c) => {
     const pct = (t?: number, s?: number) => t && t > 0 ? Number(((s! / t) * 100).toFixed(1)) : null;
     const enriched = monitors.map(m => {
       const id = m.id as number, s = sMap.get(id), lat = lMap.get(id) || [];
-      return { ...m, latency: lat.length > 0 ? lat[lat.length - 1] : null,
+      return sanitizePublicMonitor({ ...m, latency: lat.length > 0 ? lat[lat.length - 1] : null,
         uptime_24h: pct(s?.t24, s?.s24), uptime_7d: pct(s?.t7, s?.s7), uptime_30d: pct(s?.t30, s?.s30),
-        daily_stats: dMap.get(id) || [], recent_latencies: lat };
+        daily_stats: dMap.get(id) || [], recent_latencies: lat });
     });
     return c.json({ monitors: enriched });
   } catch (e: unknown) {
@@ -366,33 +374,40 @@ app.post('/monitors', async (c) => {
     }
 
     const method = (body.method || 'GET').toUpperCase();
+    const isPrivate = body.is_private ? 1 : 0;
 
     const result = await c.env.DB.prepare(
-      `INSERT INTO monitors (name, url, method, interval, keyword, user_agent, tags, request_headers, request_body)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO monitors (name, url, method, interval, keyword, user_agent, tags, request_headers, request_body, is_private)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       name, url, method,
-      interval || 300,
+      normalizeInterval(interval),
       keyword || null,
       user_agent || null,
       tags || null,
       request_headers || null,
-      request_body || null
+      request_body || null,
+      isPrivate
     ).run();
 
     const newId = result.meta.last_row_id as number;
+    const savedInterval = normalizeInterval(interval);
 
-    c.executionCtx.waitUntil(
-      (async () => {
-        try {
-          await c.env.DB.prepare('UPDATE monitors SET check_info_status = ? WHERE id = ?')
-            .bind(new Date().toISOString(), newId).run();
-          const { results } = await c.env.DB.prepare(`SELECT ${MONITOR_COLUMNS} FROM monitors WHERE id = ?`)
-            .bind(newId).all<Monitor>();
-          if (results[0]) await updateDomainCertInfo(c.env, results[0]);
-        } catch (err) { console.error('Initial cert check failed:', err); }
-      })()
-    );
+    if (savedInterval === 0) {
+      await c.env.DB.prepare('UPDATE monitors SET check_ssl = 0, check_domain = 0 WHERE id = ?').bind(newId).run();
+    } else if (savedInterval > 0) {
+      c.executionCtx.waitUntil(
+        (async () => {
+          try {
+            await c.env.DB.prepare('UPDATE monitors SET check_info_status = ? WHERE id = ?')
+              .bind(new Date().toISOString(), newId).run();
+            const { results } = await c.env.DB.prepare(`SELECT ${MONITOR_COLUMNS} FROM monitors WHERE id = ?`)
+              .bind(newId).all<Monitor>();
+            if (results[0]) await updateDomainCertInfo(c.env, results[0]);
+          } catch (err) { console.error('Initial cert check failed:', err); }
+        })()
+      );
+    }
 
     return c.json({ success: true, id: newId }, 201);
   } catch (e: unknown) {
@@ -440,13 +455,13 @@ app.patch('/monitors/:id/config', async (c) => {
     // 数值/开关字段
     if (body.interval !== undefined) {
       const iv = Number(body.interval);
-      if (!isNaN(iv) && iv >= 60) { fields.push('interval = ?'); values.push(iv); }
+      if (!isNaN(iv) && (iv === 0 || iv >= 60)) { fields.push('interval = ?'); values.push(iv); }
     }
     if (body.method !== undefined) {
       fields.push('method = ?'); values.push(String(body.method).toUpperCase());
     }
 
-    const flagFields = ['check_ssl', 'check_domain'];
+    const flagFields = ['check_ssl', 'check_domain', 'is_private'];
     for (const k of flagFields) {
       if (body[k] !== undefined) { fields.push(`${k} = ?`); values.push(body[k] ? 1 : 0); }
     }
@@ -474,6 +489,7 @@ app.post('/monitors/:id/check', async (c) => {
   try {
     const { results } = await c.env.DB.prepare(`SELECT ${MONITOR_COLUMNS} FROM monitors WHERE id = ?`).bind(id).all<Monitor>();
     if (!results[0]) return c.json({ error: 'Monitor not found' }, 404);
+    if (results[0].interval === 0) return c.json({ error: 'Bookmark entries are not checked' }, 400);
 
     // 强制执行证书及域名信息获取
     await updateDomainCertInfo(c.env, results[0]);
@@ -920,16 +936,23 @@ async function checkSites(env: Bindings) {
     FROM monitors
   `).all<Monitor>();
   const tasks = results.map(async (monitor) => {
-    if (monitor.paused === 1) return;
+    if (monitor.paused === 1 || monitor.interval === 0) return;
     if (isTimeToCheck(monitor, now)) await performCheck(monitor, env);
   });
   await Promise.all(tasks);
 }
 
+function normalizeInterval(interval: unknown): number {
+  const iv = Number(interval);
+  if (!isNaN(iv) && (iv === 0 || iv >= 60)) return iv;
+  return 300;
+}
+
 function isTimeToCheck(monitor: Monitor, now: number): boolean {
+  if (monitor.interval === 0) return false;
   if (monitor.status === 'RETRYING') return true;
   const lastCheck = monitor.last_check ? new Date(monitor.last_check).getTime() : 0;
-  const intervalMs = (monitor.interval || 300) * 1000;
+  const intervalMs = (monitor.interval ?? 300) * 1000;
   return now - lastCheck >= intervalMs;
 }
 
@@ -1173,7 +1196,7 @@ async function checkExpiryAlerts(env: Bindings) {
               check_ssl, check_domain,
               alert_silence_ssl, alert_silence_domain,
               last_alert_ssl, last_alert_domain
-       FROM monitors WHERE paused = 0`
+       FROM monitors WHERE paused = 0 AND interval > 0`
     ).all<Pick<Monitor, 'id' | 'name' | 'url' | 'cert_expiry' | 'domain_expiry' | 'check_ssl' | 'check_domain' | 'alert_silence_ssl' | 'alert_silence_domain' | 'last_alert_ssl' | 'last_alert_domain'>>();
 
     const now = Date.now();
