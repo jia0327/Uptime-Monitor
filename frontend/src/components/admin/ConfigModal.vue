@@ -32,7 +32,7 @@
                   <label class="block text-xs font-medium text-slate-400 mb-1">请求方法</label>
                   <select v-model="configForm.method" class="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm bg-slate-800/80 text-white focus:border-green-500 outline-none"><option value="GET">GET</option><option value="POST">POST</option><option value="HEAD">HEAD</option><option value="PUT">PUT</option></select>
                 </div>
-                <div><label class="block text-xs font-medium text-slate-400 mb-1">标签</label><input v-model="configForm.tags" placeholder="prod,web,api" class="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm bg-slate-800/80 text-white focus:border-green-500 outline-none placeholder-slate-600"></div>
+                <div><label class="block text-xs font-medium text-slate-400 mb-1">标签</label><TagInput v-model="configForm.tags" :suggestions="allTags" list-id="config-monitor-tags" input-class="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm bg-slate-800/80 text-white focus:border-green-500 outline-none placeholder-slate-600" /></div>
               </div>
               <div><label class="block text-xs font-medium text-slate-400 mb-1">自定义请求头</label><input v-model="configForm.request_headers" placeholder='{"Authorization":"Bearer xxx"}' class="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm bg-slate-800/80 text-white outline-none font-mono placeholder-slate-600 text-xs"></div>
               <div v-if="['POST','PUT','PATCH'].includes(configForm.method)"><label class="block text-xs font-medium text-slate-400 mb-1">请求体</label><textarea v-model="configForm.request_body" placeholder='{"key":"value"}' rows="2" class="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm bg-slate-800/80 text-white outline-none font-mono placeholder-slate-600 resize-none text-xs"></textarea></div>
@@ -109,8 +109,9 @@
 <script setup>
 import { computed, watch } from 'vue';
 import { MONITOR_INTERVAL_OPTIONS, isBookmark } from '../../utils/monitor';
+import TagInput from './TagInput.vue';
 
-const props = defineProps({ configTarget: Object, configForm: Object, configSaving: Boolean });
+const props = defineProps({ configTarget: Object, configForm: Object, configSaving: Boolean, allTags: { type: Array, default: () => [] } });
 defineEmits(['close', 'save']);
 
 const intervalOptions = MONITOR_INTERVAL_OPTIONS;

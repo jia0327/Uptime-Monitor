@@ -64,7 +64,7 @@
               </div>
               <div>
                 <label class="block text-sm font-medium text-slate-300 mb-2">标签 <span class="text-xs font-normal text-slate-500">可选，逗号分隔</span></label>
-                <input v-model="newMonitor.tags" placeholder="prod,web,api" class="input-field w-full border border-slate-700 rounded-xl px-4 py-3 text-sm bg-slate-800/80 text-white outline-none placeholder-slate-600">
+                <TagInput v-model="newMonitor.tags" :suggestions="allTags" list-id="add-monitor-tags" input-class="input-field w-full border border-slate-700 rounded-xl px-4 py-3 text-sm bg-slate-800/80 text-white outline-none placeholder-slate-600" />
               </div>
             </div>
             <div class="mt-4">
@@ -132,8 +132,9 @@
 <script setup>
 import { computed, watch } from 'vue';
 import { MONITOR_INTERVAL_OPTIONS, isBookmark } from '../../utils/monitor';
+import TagInput from './TagInput.vue';
 
-const props = defineProps({ newMonitor: Object, submitting: Boolean });
+const props = defineProps({ newMonitor: Object, submitting: Boolean, allTags: { type: Array, default: () => [] } });
 defineEmits(['close', 'submit']);
 
 const intervalOptions = MONITOR_INTERVAL_OPTIONS;

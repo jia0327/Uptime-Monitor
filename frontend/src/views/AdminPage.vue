@@ -106,10 +106,10 @@
     </footer>
 
     <!-- 所有 Modal -->
-    <AddMonitorModal v-if="showAddModal" :newMonitor="newMonitor" :submitting="submitting"
+    <AddMonitorModal v-if="showAddModal" :newMonitor="newMonitor" :submitting="submitting" :allTags="allTags"
       @close="showAddModal = false" @submit="addMonitor" />
 
-    <ConfigModal v-if="showConfig" :configTarget="configTarget" :configForm="configForm" :configSaving="configSaving"
+    <ConfigModal v-if="showConfig" :configTarget="configTarget" :configForm="configForm" :configSaving="configSaving" :allTags="allTags"
       @close="showConfig = false" @save="saveConfig" />
 
     <LogsModal v-if="showLogs" :monitor="currentMonitor" :logs="logs" :logsLoading="logsLoading"
@@ -135,6 +135,7 @@ import { useTheme } from '../composables/useTheme';
 import { useToast } from '../composables/useToast';
 import { API_BASE, fetchT, withRetry } from '../utils/api';
 import { formatDateFull, getDaysRemaining, getExpiryClassAdmin } from '../utils/format';
+import { collectAllTags } from '../utils/monitor';
 
 // 子组件
 import LoginDialog from '../components/admin/LoginDialog.vue';
@@ -231,11 +232,7 @@ const stats = computed(() => {
 });
 
 // ── Tag 和筛选 ──
-const allTags = computed(() => {
-    const tags = new Set();
-    monitors.value.forEach(m => { if (m.tags) m.tags.split(',').forEach(t => { const s = t.trim(); if (s) tags.add(s); }); });
-    return [...tags].sort();
-});
+const allTags = computed(() => collectAllTags(monitors.value));
 const filteredMonitors = computed(() => {
     let list = monitors.value;
     if (activeTag.value) list = list.filter(m => m.tags && m.tags.split(',').map(t => t.trim()).includes(activeTag.value));

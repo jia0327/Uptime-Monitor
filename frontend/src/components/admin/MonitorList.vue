@@ -126,7 +126,7 @@
 import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import Sortable from 'sortablejs';
 import { formatDateFull, formatExpiryDate, getDaysRemaining, getExpiryClassAdmin } from '../../utils/format';
-import { formatIntervalLabel } from '../../utils/monitor';
+import { formatIntervalLabel, parseTags } from '../../utils/monitor';
 
 const props = defineProps({
     monitors: Array, filteredMonitors: Array, allTags: Array,
@@ -160,8 +160,6 @@ const toggleSelected = (id) => {
     if (idx >= 0) current.splice(idx, 1); else current.push(id);
     emit('update:selectedIds', current);
 };
-
-const parseTags = (tags) => tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : [];
 
 const miniSparkline = (lats) => {
     if (!lats || lats.length < 2) return '';

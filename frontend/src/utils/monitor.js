@@ -16,3 +16,11 @@ export const formatIntervalLabel = (interval) => {
   const opt = MONITOR_INTERVAL_OPTIONS.find(o => o.value === Number(interval));
   return opt ? opt.label : `${interval}s`;
 };
+
+export const parseTags = (tags) => (tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : []);
+
+export const collectAllTags = (monitors) => {
+  const set = new Set();
+  (monitors || []).forEach(m => parseTags(m?.tags).forEach(t => set.add(t)));
+  return [...set].sort((a, b) => a.localeCompare(b, 'zh-CN'));
+};

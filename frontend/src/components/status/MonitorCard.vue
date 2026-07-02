@@ -20,10 +20,16 @@
                 'bg-yellow-400': monitor.status === 'RETRYING' && !isBookmark,
                 'bg-slate-400 dark:bg-slate-600': monitor.paused,
                 'bg-blue-400': isBookmark && !monitor.paused,
+                'bg-purple-400': isPrivate && !isBookmark && !monitor.paused,
               }"></div>
-            <div v-if="monitor.status === 'UP' && !monitor.paused && !isBookmark" class="absolute inset-0 rounded-full bg-emerald-400/40 pulse-dot"></div>
+            <div v-if="monitor.status === 'UP' && !monitor.paused && !isBookmark && !isPrivate" class="absolute inset-0 rounded-full bg-emerald-400/40 pulse-dot"></div>
           </div>
-          <h3 class="font-bold text-slate-900 dark:text-white text-base truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-300 transition-colors">{{ monitor.name }}</h3>
+          <h3 class="font-bold text-slate-900 dark:text-white text-base truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-300 transition-colors flex items-center gap-1.5 min-w-0">
+            <span class="truncate">{{ monitor.name }}</span>
+            <span v-if="isPrivate" class="inline-flex shrink-0 items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-purple-500/10 text-purple-500 dark:text-purple-300 border border-purple-500/20" title="私密监控，链接不公开">
+              <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
+            </span>
+          </h3>
         </div>
 
         <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 pl-5">
@@ -40,6 +46,10 @@
       </div>
 
       <div class="flex shrink-0 flex-wrap items-center gap-2 md:justify-end monitor-meta">
+        <span v-if="isPrivate && !isBookmark" class="inline-flex min-w-[64px] justify-center px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-500/20">
+          <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
+          私密
+        </span>
         <span v-if="isBookmark" class="inline-flex min-w-[64px] justify-center px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-500/20">书签</span>
         <span v-else-if="monitor.paused" class="inline-flex min-w-[64px] justify-center px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700">暂停</span>
         <span v-else-if="monitor.status === 'UP'" class="inline-flex min-w-[64px] justify-center px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/20">在线</span>
