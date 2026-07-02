@@ -23,7 +23,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'   # ⭐ 升 24，消掉 deprecation 提示
           cache: 'npm'
           cache-dependency-path: worker/package-lock.json
 
@@ -36,6 +36,8 @@ jobs:
         run: |
           cat > wrangler.toml << 'WRANGLER_EOF'
           name = "uptime-worker"
+          # ⭐ 补 account_id，否则 D1 校验会炸
+          account_id = "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
           main = "src/index.ts"
           compatibility_date = "2024-02-08"
 
@@ -44,18 +46,23 @@ jobs:
           WRANGLER_EOF
 
           echo '' >> wrangler.toml
-          echo '[[d1_databases]]' >> wrangler.toml
+          echo '[[d1_databases]]' << wrangler.toml
           echo 'binding = "DB"' >> wrangler.toml
           echo 'database_name = "uptime-db"' >> wrangler.toml
-          echo 'database_id = "${{ secrets.D1_DATABASE_ID }}"' >> wrangler.toml
+          echo "database_id = \"${{ secrets.D1_DATABASE_ID }}\"" >> wrangler.toml  # ⭐ 改成双引号外扩，防 $ 转义
           echo '' >> wrangler.toml
           echo '[vars]' >> wrangler.toml
-          echo 'ADMIN_API_KEY = "${{ secrets.ADMIN_API_KEY }}"' >> wrangler.toml
-          echo 'ALLOWED_ORIGIN = "${{ vars.ALLOWED_ORIGIN }}"' >> wrangler.toml
-          echo 'SESSION_TTL_HOURS = "${{ vars.SESSION_TTL_HOURS }}"' >> wrangler.toml
+          echo "ADMIN_API_KEY = \"${{ secrets.ADMIN_API_KEY }}\"" >> wrangler.toml
+          echo "ALLOWED_ORIGIN = \"${{ vars.ALLOWED_ORIGIN }}\"" >> wrangler.toml
+          echo "SESSION_TTL_HOURS = \"${{ vars.SESSION_TTL_HOURS }}\"" >> wrangler.toml
 
+      - name: Debug wrangler.toml  # ⭐ 临时加，排错用，跑通后可删
+        working-directory: worker
+        run: cat wrangler.toml
+
+      # ⭐ wrangler-action 升 @v4
       - name: Deploy Worker
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -75,7 +82,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
@@ -93,14 +100,14 @@ jobs:
 
       - name: Create Pages project (if not exists)
         continue-on-error: true
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages project create uptime-monitor --production-branch=main
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -119,7 +126,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: worker/package-lock.json
 
@@ -132,6 +139,7 @@ jobs:
         run: |
           cat > wrangler.toml << 'WRANGLER_EOF'
           name = "uptime-worker"
+          account_id = "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
           main = "src/index.ts"
           compatibility_date = "2024-02-08"
 
@@ -143,15 +151,19 @@ jobs:
           echo '[[d1_databases]]' >> wrangler.toml
           echo 'binding = "DB"' >> wrangler.toml
           echo 'database_name = "uptime-db"' >> wrangler.toml
-          echo 'database_id = "${{ secrets.D1_DATABASE_ID }}"' >> wrangler.toml
+          echo "database_id = \"${{ secrets.D1_DATABASE_ID }}\"" >> wrangler.toml
           echo '' >> wrangler.toml
           echo '[vars]' >> wrangler.toml
-          echo 'ADMIN_API_KEY = "${{ secrets.ADMIN_API_KEY }}"' >> wrangler.toml
-          echo 'ALLOWED_ORIGIN = "${{ vars.ALLOWED_ORIGIN }}"' >> wrangler.toml
-          echo 'SESSION_TTL_HOURS = "${{ vars.SESSION_TTL_HOURS }}"' >> wrangler.toml
+          echo "ADMIN_API_KEY = \"${{ secrets.ADMIN_API_KEY }}\"" >> wrangler.toml
+          echo "ALLOWED_ORIGIN = \"${{ vars.ALLOWED_ORIGIN }}\"" >> wrangler.toml
+          echo "SESSION_TTL_HOURS = \"${{ vars.SESSION_TTL_HOURS }}\"" >> wrangler.toml
+
+      - name: Debug wrangler.toml
+        working-directory: worker
+        run: cat wrangler.toml
 
       - name: Deploy Worker
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -171,7 +183,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
@@ -189,14 +201,14 @@ jobs:
 
       - name: Create Pages project (if not exists)
         continue-on-error: true
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages project create uptime-monitor --production-branch=main
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
