@@ -2,7 +2,7 @@
 
 English | [中文](README.md)
 
-Uptime Monitor is a lightweight website monitoring system built on Cloudflare Workers, Pages, and D1. It supports multi-site uptime checks, SSL certificate and domain expiration checks, multiple notification channels, a public status page, and an admin dashboard.
+Uptime Monitor is a lightweight website monitoring system built on Cloudflare Workers, Pages, and D1. It supports multi-site uptime checks, SSL certificate and domain expiration checks, multiple notification channels, a public status page, and an admin dashboard. It also works as a **monitoring + bookmark** hub for public sites and internal links.
 
 The project can run within Cloudflare's free tier and does not require a self-hosted server. The frontend uses bundled fonts and icons instead of runtime Google Fonts or icon CDN dependencies, making it friendlier for users in mainland China.
 
@@ -11,21 +11,44 @@ The project can run within Cloudflare's free tier and does not require a self-ho
 - Personal site owners who want to monitor blogs, docs, APIs, image hosts, proxies, or small services.
 - Indie developers who need a public status page and alerting dashboard for their own products.
 - Small teams that need low-cost monitoring for websites, certificates, domains, and key HTTP endpoints.
+- Homelab / hybrid users who want bookmark-only entries for NAS, side routers, or other URLs that cannot be probed from the public internet.
 - Cloudflare users who prefer Workers, Pages, and D1 over maintaining a server.
 
 It is not meant to replace large observability platforms with distributed probes, advanced SLO reporting, on-call scheduling, or multi-tenant permission systems.
 
 ## Features
 
+### Monitoring and alerts
+
 - HTTP/HTTPS monitoring for multiple sites, with GET/POST, custom headers, request bodies, and keyword checks.
+- Check intervals: 1 / 3 / 5 / 10 / 15 / 30 minutes, or **no checks** (bookmark mode).
 - SSL certificate and domain expiration monitoring with independent toggles and alert thresholds.
 - Notifications through WeCom, Feishu, DingTalk, custom Webhook, Telegram, and Email.
-- Configurable alert templates with separate incident and recovery messages.
+- Configurable alert templates with separate incident and recovery messages; silence windows for uptime, SSL, and domain alerts.
+
+### Status page and bookmarks
+
 - Public status page with tag grouping, incidents, maintenance windows, and custom logo support.
+- **Bookmark mode (no checks)**: when interval is set to “no checks”, the entry is shown as a link only and no HTTP probe runs. Useful for internal NAS, side routers, or other unreachable URLs.
+- **Private monitors**: the public page still shows the name and status, but **hides the URL** and shows a lock badge. Admin keeps full URL access and checks. Useful for sensitive panels such as admin tools.
+- Admin entry is available in the status page header, not only in the footer.
+
+### Admin dashboard
+
+- Tags can be picked from existing labels or typed as new comma-separated values.
 - Admin dashboard with bulk actions, drag-and-drop sorting, JSON import/export, and health checks.
 - Session-based admin authentication so the frontend does not keep a plaintext password.
 - `ALLOWED_ORIGIN` support for Worker and Pages proxy CORS hardening.
 - GitHub Actions deployment for both Worker and Pages.
+
+### Mode comparison
+
+| Mode | Public page | HTTP checks | Typical use |
+|---|---|---|---|
+| Normal monitor | Name + link + status | Yes | Public websites, APIs |
+| Bookmark (no checks) | Name + link | No | Internal NAS, side router |
+| Private monitor | Name + status, **link hidden** | Yes | Sensitive admin panels |
+| Bookmark + private | Name only, **link hidden** | No | Sensitive internal links |
 
 ## Quick Facts
 
@@ -34,7 +57,9 @@ It is not meant to replace large observability platforms with distributed probes
 | Does it need a server | No, it runs on Cloudflare Workers, Pages, and D1 |
 | Does it need a database | Yes, Cloudflare D1 |
 | Public status page | Yes |
-| Admin dashboard | Yes, available at `/admin` |
+| Admin dashboard | Yes, at `/admin`; also linked from the status page header |
+| Bookmark / internal links | Yes, set interval to “no checks” |
+| Private monitors | Yes, public page hides URL and shows a lock badge |
 | Notification channels | WeCom, Feishu, DingTalk, Webhook, Telegram, Email |
 | Mainland China friendliness | Frontend assets are bundled locally; WeCom, Feishu, and DingTalk are recommended first |
 | Online demo | [https://uptime.nianshu2022.cn](https://uptime.nianshu2022.cn) |
@@ -121,7 +146,15 @@ If you already have a D1 database, copy the Database ID from the Cloudflare Dash
 npx wrangler d1 list
 ```
 
-For existing databases, run `worker/schema.sql` again. The `CREATE INDEX IF NOT EXISTS` statements will add missing indexes without recreating existing ones.
+For existing databases, apply the **incremental migration** statements at the bottom of `worker/schema.sql`. Do not run the full schema file on a live database (it drops tables).
+
+To upgrade to a version with **private monitors**, run:
+
+```bash
+npx wrangler d1 execute uptime-db --remote --command="ALTER TABLE monitors ADD COLUMN is_private INTEGER DEFAULT 0;"
+```
+
+Bookmark mode uses `interval = 0` and needs no extra column. If the column already exists, SQLite will error and you can ignore it.
 
 ## Pre-deployment Checklist
 
