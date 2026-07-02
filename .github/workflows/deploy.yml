@@ -9,194 +9,195 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
-# ===== 账号 A (juntaojia66) =====
-deploy-worker-a:
-  name: Deploy Worker (Account A - juntaojia66)
-  runs-on: ubuntu-latest
-  environment: juntaojia66  # 【关键】绑定 GitHub 环境
+jobs:
+  # ===== 账号 A (juntaojia66) =====
+  deploy-worker-a:
+    name: Deploy Worker (Account A - juntaojia66)
+    runs-on: ubuntu-latest
+    environment: juntaojia66
 
-  steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22'
-        cache: 'npm'
-        cache-dependency-path: worker/package-lock.json
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: worker/package-lock.json
 
-    - name: Install dependencies
-      working-directory: worker
-      run: npm ci
+      - name: Install dependencies
+        working-directory: worker
+        run: npm ci
 
-    - name: Generate wrangler.toml
-      working-directory: worker
-      run: |
-        cat > wrangler.toml << 'WRANGLER_EOF'
-        name = "uptime-worker"
-        main = "src/index.ts"
-        compatibility_date = "2024-02-08"
+      - name: Generate wrangler.toml
+        working-directory: worker
+        run: |
+          cat > wrangler.toml << 'WRANGLER_EOF'
+          name = "uptime-worker"
+          main = "src/index.ts"
+          compatibility_date = "2024-02-08"
 
-        [triggers]
-        crons = ["* * * * *"]
-        WRANGLER_EOF
+          [triggers]
+          crons = ["* * * * *"]
+          WRANGLER_EOF
 
-        echo '' >> wrangler.toml
-        echo '[[d1_databases]]' >> wrangler.toml
-        echo 'binding = "DB"' >> wrangler.toml
-        echo 'database_name = "uptime-db"' >> wrangler.toml
-        echo 'database_id = "${{ secrets.D1_DATABASE_ID }}"' >> wrangler.toml
-        echo '' >> wrangler.toml
-        echo '[vars]' >> wrangler.toml
-        echo 'ADMIN_API_KEY = "${{ secrets.ADMIN_API_KEY }}"' >> wrangler.toml
-        echo 'ALLOWED_ORIGIN = "${{ vars.ALLOWED_ORIGIN }}"' >> wrangler.toml
-        echo 'SESSION_TTL_HOURS = "${{ vars.SESSION_TTL_HOURS }}"' >> wrangler.toml
+          echo '' >> wrangler.toml
+          echo '[[d1_databases]]' >> wrangler.toml
+          echo 'binding = "DB"' >> wrangler.toml
+          echo 'database_name = "uptime-db"' >> wrangler.toml
+          echo 'database_id = "${{ secrets.D1_DATABASE_ID }}"' >> wrangler.toml
+          echo '' >> wrangler.toml
+          echo '[vars]' >> wrangler.toml
+          echo 'ADMIN_API_KEY = "${{ secrets.ADMIN_API_KEY }}"' >> wrangler.toml
+          echo 'ALLOWED_ORIGIN = "${{ vars.ALLOWED_ORIGIN }}"' >> wrangler.toml
+          echo 'SESSION_TTL_HOURS = "${{ vars.SESSION_TTL_HOURS }}"' >> wrangler.toml
 
-    - name: Deploy Worker
-      uses: cloudflare/wrangler-action@v3
-      with:
-        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        workingDirectory: worker
-        command: deploy
+      - name: Deploy Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: worker
+          command: deploy
 
-deploy-pages-a:
-  name: Deploy Pages (Account A - juntaojia66)
-  runs-on: ubuntu-latest
-  needs: deploy-worker-a
-  environment: juntaojia66
+  deploy-pages-a:
+    name: Deploy Pages (Account A - juntaojia66)
+    runs-on: ubuntu-latest
+    needs: deploy-worker-a
+    environment: juntaojia66
 
-  steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22'
-        cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
-    - name: Install dependencies
-      working-directory: frontend
-      run: npm ci
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
 
-    - name: Build frontend
-      working-directory: frontend
-      run: npm run build
-      env:
-        VITE_CF_ANALYTICS_TOKEN: ${{ secrets.VITE_CF_ANALYTICS_TOKEN }}
-        VITE_FOOTER_AUTHOR: ${{ vars.VITE_FOOTER_AUTHOR }}
-        VITE_FOOTER_URL: ${{ vars.VITE_FOOTER_URL }}
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+        env:
+          VITE_CF_ANALYTICS_TOKEN: ${{ secrets.VITE_CF_ANALYTICS_TOKEN }}
+          VITE_FOOTER_AUTHOR: ${{ vars.VITE_FOOTER_AUTHOR }}
+          VITE_FOOTER_URL: ${{ vars.VITE_FOOTER_URL }}
 
-    - name: Create Pages project (if not exists)
-      continue-on-error: true
-      uses: cloudflare/wrangler-action@v3
-      with:
-        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        command: pages project create uptime-monitor --production-branch=main
+      - name: Create Pages project (if not exists)
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages project create uptime-monitor --production-branch=main
 
-    - name: Deploy to Cloudflare Pages
-      uses: cloudflare/wrangler-action@v3
-      with:
-        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        command: pages deploy frontend/dist --project-name=uptime-monitor --branch=main --commit-dirty=true
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy frontend/dist --project-name=uptime-monitor --branch=main --commit-dirty=true
 
-# ===== 账号 B (173233) =====
-deploy-worker-b:
-  name: Deploy Worker (Account B - 173233)
-  runs-on: ubuntu-latest
-  environment: 173233  # 【关键】绑定第二个环境
+  # ===== 账号 B (173233) =====
+  deploy-worker-b:
+    name: Deploy Worker (Account B - 173233)
+    runs-on: ubuntu-latest
+    environment: 173233
 
-  steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22'
-        cache: 'npm'
-        cache-dependency-path: worker/package-lock.json
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: worker/package-lock.json
 
-    - name: Install dependencies
-      working-directory: worker
-      run: npm ci
+      - name: Install dependencies
+        working-directory: worker
+        run: npm ci
 
-    - name: Generate wrangler.toml
-      working-directory: worker
-      run: |
-        cat > wrangler.toml << 'WRANGLER_EOF'
-        name = "uptime-worker"
-        main = "src/index.ts"
-        compatibility_date = "2024-02-08"
+      - name: Generate wrangler.toml
+        working-directory: worker
+        run: |
+          cat > wrangler.toml << 'WRANGLER_EOF'
+          name = "uptime-worker"
+          main = "src/index.ts"
+          compatibility_date = "2024-02-08"
 
-        [triggers]
-        crons = ["* * * * *"]
-        WRANGLER_EOF
+          [triggers]
+          crons = ["* * * * *"]
+          WRANGLER_EOF
 
-        echo '' >> wrangler.toml
-        echo '[[d1_databases]]' >> wrangler.toml
-        echo 'binding = "DB"' >> wrangler.toml
-        echo 'database_name = "uptime-db"' >> wrangler.toml
-        echo 'database_id = "${{ secrets.D1_DATABASE_ID }}"' >> wrangler.toml
-        echo '' >> wrangler.toml
-        echo '[vars]' >> wrangler.toml
-        echo 'ADMIN_API_KEY = "${{ secrets.ADMIN_API_KEY }}"' >> wrangler.toml
-        echo 'ALLOWED_ORIGIN = "${{ vars.ALLOWED_ORIGIN }}"' >> wrangler.toml
-        echo 'SESSION_TTL_HOURS = "${{ vars.SESSION_TTL_HOURS }}"' >> wrangler.toml
+          echo '' >> wrangler.toml
+          echo '[[d1_databases]]' >> wrangler.toml
+          echo 'binding = "DB"' >> wrangler.toml
+          echo 'database_name = "uptime-db"' >> wrangler.toml
+          echo 'database_id = "${{ secrets.D1_DATABASE_ID }}"' >> wrangler.toml
+          echo '' >> wrangler.toml
+          echo '[vars]' >> wrangler.toml
+          echo 'ADMIN_API_KEY = "${{ secrets.ADMIN_API_KEY }}"' >> wrangler.toml
+          echo 'ALLOWED_ORIGIN = "${{ vars.ALLOWED_ORIGIN }}"' >> wrangler.toml
+          echo 'SESSION_TTL_HOURS = "${{ vars.SESSION_TTL_HOURS }}"' >> wrangler.toml
 
-    - name: Deploy Worker
-      uses: cloudflare/wrangler-action@v3
-      with:
-        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        workingDirectory: worker
-        command: deploy
+      - name: Deploy Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: worker
+          command: deploy
 
-deploy-pages-b:
-  name: Deploy Pages (Account B - 173233)
-  runs-on: ubuntu-latest
-  needs: deploy-worker-b
-  environment: 173233
+  deploy-pages-b:
+    name: Deploy Pages (Account B - 173233)
+    runs-on: ubuntu-latest
+    needs: deploy-worker-b
+    environment: 173233
 
-  steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22'
-        cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
-    - name: Install dependencies
-      working-directory: frontend
-      run: npm ci
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
 
-    - name: Build frontend
-      working-directory: frontend
-      run: npm run build
-      env:
-        VITE_CF_ANALYTICS_TOKEN: ${{ secrets.VITE_CF_ANALYTICS_TOKEN }}
-        VITE_FOOTER_AUTHOR: ${{ vars.VITE_FOOTER_AUTHOR }}
-        VITE_FOOTER_URL: ${{ vars.VITE_FOOTER_URL }}
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+        env:
+          VITE_CF_ANALYTICS_TOKEN: ${{ secrets.VITE_CF_ANALYTICS_TOKEN }}
+          VITE_FOOTER_AUTHOR: ${{ vars.VITE_FOOTER_AUTHOR }}
+          VITE_FOOTER_URL: ${{ vars.VITE_FOOTER_URL }}
 
-    - name: Create Pages project (if not exists)
-      continue-on-error: true
-      uses: cloudflare/wrangler-action@v3
-      with:
-        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        command: pages project create uptime-monitor --production-branch=main
+      - name: Create Pages project (if not exists)
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages project create uptime-monitor --production-branch=main
 
-    - name: Deploy to Cloudflare Pages
-      uses: cloudflare/wrangler-action@v3
-      with:
-        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        command: pages deploy frontend/dist --project-name=uptime-monitor --branch=main --commit-dirty=true
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy frontend/dist --project-name=uptime-monitor --branch=main --commit-dirty=true
