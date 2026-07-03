@@ -34,8 +34,8 @@
           <button @click="showChannels = true" class="flex items-center gap-1.5 px-3 py-2 bg-slate-200 dark:bg-slate-700/50 hover:bg-slate-300 dark:hover:bg-slate-600/50 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-xs font-medium rounded-xl transition-all cursor-pointer border border-slate-300 dark:border-slate-600/50">
             <i class="fas fa-bell text-xs"></i> 通知渠道
           </button>
-          <button @click="showAddModal = true" class="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-medium rounded-xl transition-all hover:shadow-lg hover:shadow-green-500/20 cursor-pointer">
-            <i class="fas fa-plus text-xs"></i> 添加监控
+          <button @click="openAddModal" class="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-medium rounded-xl transition-all hover:shadow-lg hover:shadow-green-500/20 cursor-pointer">
+            <i class="fas fa-plus text-xs"></i> {{ adminTab === 'bookmarks' ? '添加书签' : '添加监控' }}
           </button>
         </div>
       </div>
@@ -75,21 +75,49 @@
         </div>
         <h3 class="text-lg font-medium text-slate-900 dark:text-white">暂无监控项目</h3>
         <p class="text-slate-500 mt-1 mb-6 text-sm">点击上方「添加监控」开始配置</p>
-        <button @click="showAddModal = true" class="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-500 text-white text-sm font-medium rounded-xl transition-all shadow-sm hover:shadow-lg hover:shadow-green-500/20 cursor-pointer">
+        <button @click="openAddModal" class="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-500 text-white text-sm font-medium rounded-xl transition-all shadow-sm hover:shadow-lg hover:shadow-green-500/20 cursor-pointer">
           <i class="fas fa-plus text-xs"></i> 添加第一个监控
         </button>
       </div>
 
-      <!-- 监控列表 -->
-      <MonitorList v-else
-        :monitors="monitors" :filteredMonitors="filteredMonitors" :allTags="allTags"
-        :activeTag="activeTag" :selectedIds="selectedIds" :searchQuery="searchQuery" :sortKey="sortKey"
-        @update:activeTag="activeTag = $event" @update:selectedIds="selectedIds = $event"
-        @update:searchQuery="searchQuery = $event" @update:sortKey="sortKey = $event"
-        @force-check="forceCheck" @toggle-pause="togglePause" @open-config="openConfig"
-        @view-logs="viewLogs" @clone="cloneMonitor" @delete="deleteMonitor"
-        @batch-action="batchAction" @reorder="handleReorder"
-      />
+      <template v-else>
+        <!-- 监控 / 书签 Tab -->
+        <div class="flex items-center gap-1 mb-4 p-0.5 rounded-lg bg-slate-200/60 dark:bg-white/[0.04] border border-slate-300/60 dark:border-white/[0.06] w-fit fade-up-d1">
+          <button type="button" class="nav-tab flex items-center gap-1.5" :class="adminTab === 'monitors' ? 'nav-tab-active' : ''" @click="adminTab = 'monitors'">
+            监控
+            <span class="text-[10px] font-mono opacity-70">{{ monitoredItems.length }}</span>
+          </button>
+          <button type="button" class="nav-tab flex items-center gap-1.5" :class="adminTab === 'bookmarks' ? 'nav-tab-active' : ''" @click="adminTab = 'bookmarks'">
+            书签
+            <span class="text-[10px] font-mono opacity-70">{{ bookmarkItems.length }}</span>
+          </button>
+        </div>
+
+        <!-- 当前 Tab 空状态 -->
+        <div v-if="tabMonitors.length === 0 && !loading"
+          class="text-center py-16 glass rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 fade-up-d2">
+          <div class="w-14 h-14 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
+            <i class="fas text-xl text-slate-400 dark:text-slate-600" :class="adminTab === 'bookmarks' ? 'fa-bookmark' : 'fa-satellite-dish'"></i>
+          </div>
+          <h3 class="text-base font-medium text-slate-900 dark:text-white">{{ adminTab === 'bookmarks' ? '暂无书签' : '暂无监控项' }}</h3>
+          <p class="text-slate-500 mt-1 mb-5 text-sm">{{ adminTab === 'bookmarks' ? '添加「不检测」模式的条目作为书签，可用标签分类' : '添加需要可用性检测的服务' }}</p>
+          <button @click="openAddModal" class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-medium rounded-xl transition-all cursor-pointer">
+            <i class="fas fa-plus text-xs"></i> {{ adminTab === 'bookmarks' ? '添加书签' : '添加监控' }}
+          </button>
+        </div>
+
+        <!-- 列表 -->
+        <MonitorList v-else
+          :listKind="adminTab === 'bookmarks' ? 'bookmark' : 'monitor'"
+          :monitors="tabMonitors" :filteredMonitors="filteredMonitors" :allTags="allTags"
+          :activeTag="activeTag" :selectedIds="selectedIds" :searchQuery="searchQuery" :sortKey="sortKey"
+          @update:activeTag="activeTag = $event" @update:selectedIds="selectedIds = $event"
+          @update:searchQuery="searchQuery = $event" @update:sortKey="sortKey = $event"
+          @force-check="forceCheck" @toggle-pause="togglePause" @open-config="openConfig"
+          @view-logs="viewLogs" @clone="cloneMonitor" @delete="deleteMonitor"
+          @batch-action="batchAction" @reorder="handleReorder"
+        />
+      </template>
     </main>
 
     <!-- Footer -->
@@ -135,7 +163,7 @@ import { useTheme } from '../composables/useTheme';
 import { useToast } from '../composables/useToast';
 import { API_BASE, fetchT, withRetry } from '../utils/api';
 import { formatDateFull, getDaysRemaining, getExpiryClassAdmin } from '../utils/format';
-import { collectAllTags } from '../utils/monitor';
+import { collectAllTags, isBookmark } from '../utils/monitor';
 
 // 子组件
 import LoginDialog from '../components/admin/LoginDialog.vue';
@@ -166,10 +194,18 @@ const lastRefreshed = ref('');
 const health = ref(null);
 
 // ── 搜索/排序/筛选 ──
+const adminTab = ref('monitors');
 const searchQuery = ref('');
 const sortKey = ref('');
 const activeTag = ref('');
 const selectedIds = ref([]);
+
+watch(adminTab, () => {
+    activeTag.value = '';
+    selectedIds.value = [];
+    searchQuery.value = '';
+    sortKey.value = '';
+});
 
 // ── Modal 控制 ──
 const showAddModal = ref(false);
@@ -232,9 +268,12 @@ const stats = computed(() => {
 });
 
 // ── Tag 和筛选 ──
-const allTags = computed(() => collectAllTags(monitors.value));
+const monitoredItems = computed(() => monitors.value.filter(m => !isBookmark(m)));
+const bookmarkItems = computed(() => monitors.value.filter(m => isBookmark(m)));
+const tabMonitors = computed(() => adminTab.value === 'bookmarks' ? bookmarkItems.value : monitoredItems.value);
+const allTags = computed(() => collectAllTags(tabMonitors.value));
 const filteredMonitors = computed(() => {
-    let list = monitors.value;
+    let list = tabMonitors.value;
     if (activeTag.value) list = list.filter(m => m.tags && m.tags.split(',').map(t => t.trim()).includes(activeTag.value));
     const q = searchQuery.value.trim().toLowerCase();
     if (q) list = list.filter(m => (m.name && m.name.toLowerCase().includes(q)) || (m.url && m.url.toLowerCase().includes(q)) || (m.link_url && m.link_url.toLowerCase().includes(q)));
@@ -251,6 +290,15 @@ const filteredMonitors = computed(() => {
     }
     return list;
 });
+
+const defaultNewMonitor = () => ({ name: '', url: '', link_url: '', method: 'GET', keyword: '', user_agent: '', tags: '', request_headers: '', request_body: '', interval: 300, check_ssl: true, check_domain: true, alert_silence_hours: '24', alert_error_rate: 0, is_private: false });
+
+const openAddModal = () => {
+    newMonitor.value = adminTab.value === 'bookmarks'
+        ? { ...defaultNewMonitor(), interval: 0, check_ssl: false, check_domain: false }
+        : defaultNewMonitor();
+    showAddModal.value = true;
+};
 
 // ── 数据获取 ──
 const fetchMonitors = async () => {
@@ -293,7 +341,7 @@ const addMonitor = async () => {
     try {
         const body = { ...newMonitor.value, check_ssl: newMonitor.value.check_ssl ? 1 : 0, check_domain: newMonitor.value.check_domain ? 1 : 0, is_private: newMonitor.value.is_private ? 1 : 0, interval: Number(newMonitor.value.interval) };
         const res = await authFetch(`${API_BASE}/monitors`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-        if (res.ok) { newMonitor.value = { name: '', url: '', link_url: '', method: 'GET', keyword: '', user_agent: '', tags: '', request_headers: '', request_body: '', interval: 300, check_ssl: true, check_domain: true, alert_silence_hours: '24', alert_error_rate: 0, is_private: false }; showAddModal.value = false; addToast('监控添加成功', 'success'); fetchMonitors(); }
+        if (res.ok) { newMonitor.value = defaultNewMonitor(); showAddModal.value = false; addToast('监控添加成功', 'success'); fetchMonitors(); }
         else { const d = await res.json(); addToast(d.error || '添加失败', 'error'); }
     } catch { addToast('网络错误', 'error'); }
     finally { submitting.value = false; }
@@ -405,7 +453,7 @@ onMounted(() => {
     document.addEventListener('keydown', (e) => {
         if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
         if (e.key === 'Escape') { showAddModal.value = false; showLogs.value = false; showConfig.value = false; showChannels.value = false; showIncidents.value = false; showSettings.value = false; if (confirmModal.value.show) handleConfirm(false); }
-        if ((e.key === 'n' || e.key === 'N') && !showAddModal.value && !showLogs.value && !showConfig.value) { e.preventDefault(); showAddModal.value = true; }
+        if ((e.key === 'n' || e.key === 'N') && !showAddModal.value && !showLogs.value && !showConfig.value) { e.preventDefault(); openAddModal(); }
         if ((e.key === 'r' || e.key === 'R') && !showAddModal.value && !showLogs.value && !showConfig.value) { e.preventDefault(); fetchMonitors(); }
         if (e.key === '/' && !showAddModal.value && !showLogs.value && !showConfig.value) { e.preventDefault(); document.querySelector('.search-input')?.focus(); }
     });

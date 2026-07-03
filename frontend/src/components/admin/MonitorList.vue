@@ -2,14 +2,17 @@
   <div class="space-y-2.5 fade-up-d2" ref="listRef">
     <div class="flex flex-col gap-2 mb-3">
       <div class="flex items-center justify-between gap-3">
-        <h2 class="text-xs font-semibold uppercase tracking-widest text-slate-500 shrink-0">监控列表</h2>
+        <h2 class="text-xs font-semibold uppercase tracking-widest text-slate-500 shrink-0">{{ listKind === 'bookmark' ? '书签列表' : '监控列表' }}</h2>
         <div class="flex items-center gap-2 flex-1 justify-end">
           <div class="relative">
             <i class="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-500"></i>
             <input :value="searchQuery" @input="$emit('update:searchQuery', $event.target.value)" type="text" placeholder="搜索名称或 URL..." class="search-input">
           </div>
           <select :value="sortKey" @change="$emit('update:sortKey', $event.target.value)" class="text-[11px] font-mono bg-transparent border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-lg px-2 py-1.5 cursor-pointer focus:outline-none focus:border-green-500" style="appearance:none;-webkit-appearance:none">
-            <option value="">默认排序</option><option value="name">按名称</option><option value="status">按状态</option><option value="latency">按延迟</option><option value="ssl">按SSL到期</option>
+            <option value="">默认排序</option><option value="name">按名称</option>
+            <template v-if="listKind !== 'bookmark'">
+              <option value="status">按状态</option><option value="latency">按延迟</option><option value="ssl">按SSL到期</option>
+            </template>
           </select>
           <span class="text-xs font-mono text-slate-500 dark:text-slate-600 shrink-0">{{ filteredMonitors.length }} / {{ monitors.length }}</span>
         </div>
@@ -22,8 +25,8 @@
       <!-- 批量操作栏 -->
       <div v-if="selectedIds.length > 0" class="bulk-bar">
         <span class="text-xs text-green-400 font-medium">已选 {{ selectedIds.length }} 项</span>
-        <button @click="$emit('batch-action', 'pause')" class="text-xs px-3 py-1.5 rounded-lg bg-yellow-500/15 text-yellow-400 hover:bg-yellow-500/25 transition cursor-pointer"><i class="fas fa-pause mr-1"></i>暂停</button>
-        <button @click="$emit('batch-action', 'resume')" class="text-xs px-3 py-1.5 rounded-lg bg-green-500/15 text-green-400 hover:bg-green-500/25 transition cursor-pointer"><i class="fas fa-play mr-1"></i>恢复</button>
+        <button v-if="listKind !== 'bookmark'" @click="$emit('batch-action', 'pause')" class="text-xs px-3 py-1.5 rounded-lg bg-yellow-500/15 text-yellow-400 hover:bg-yellow-500/25 transition cursor-pointer"><i class="fas fa-pause mr-1"></i>暂停</button>
+        <button v-if="listKind !== 'bookmark'" @click="$emit('batch-action', 'resume')" class="text-xs px-3 py-1.5 rounded-lg bg-green-500/15 text-green-400 hover:bg-green-500/25 transition cursor-pointer"><i class="fas fa-play mr-1"></i>恢复</button>
         <button @click="$emit('batch-action', 'delete')" class="text-xs px-3 py-1.5 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition cursor-pointer"><i class="fas fa-trash mr-1"></i>删除</button>
         <button @click="$emit('update:selectedIds', [])" class="ml-auto text-xs text-slate-500 hover:text-white cursor-pointer"><i class="fas fa-times"></i></button>
       </div>
@@ -52,7 +55,7 @@
             </a>
             <h3 v-else class="font-semibold text-slate-900 dark:text-white truncate">{{ m.name }}</h3>
             <span class="text-[10px] font-mono text-slate-600 shrink-0">{{ m.method || 'GET' }}</span>
-            <span v-if="m.interval === 0" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400">书签</span>
+            <span v-if="m.interval === 0 && listKind !== 'bookmark'" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400">书签</span>
             <span v-if="m.is_private === 1" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-400"><i class="fas fa-lock text-[8px] mr-0.5"></i>私密</span>
             <span v-if="m.status === 'DOWN'" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 animate-pulse">DOWN</span>
             <span v-if="m.status === 'RETRYING'" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-yellow-500/20 text-yellow-400">重试中</span>
@@ -94,10 +97,10 @@
           </div>
         </div>
         <div class="flex flex-wrap items-center justify-end gap-0.5 sm:gap-1 w-full sm:w-auto border-t sm:border-t-0 border-slate-100 dark:border-white/5 pt-2 sm:pt-0 mt-1 sm:mt-0">
-          <button @click="$emit('force-check', m)" class="p-2 text-slate-500 hover:text-green-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer disabled:opacity-50" :disabled="m._checking || m.interval === 0" :title="m.interval === 0 ? '书签模式不检测' : '立即检查'">
+          <button v-if="listKind !== 'bookmark'" @click="$emit('force-check', m)" class="p-2 text-slate-500 hover:text-green-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer disabled:opacity-50" :disabled="m._checking || m.interval === 0" :title="m.interval === 0 ? '书签模式不检测' : '立即检查'">
             <i class="fas fa-sync-alt text-sm" :class="{ 'fa-spin text-green-400': m._checking }"></i>
           </button>
-          <button @click="$emit('toggle-pause', m)" class="p-2 rounded-lg transition-colors cursor-pointer" :class="m.paused ? 'text-green-500 hover:bg-slate-100 dark:hover:bg-slate-800' : 'text-slate-400 dark:text-slate-500 hover:text-yellow-500 hover:bg-slate-100 dark:hover:bg-slate-800'" :title="m.paused ? '恢复监控' : '暂停监控'">
+          <button v-if="listKind !== 'bookmark'" @click="$emit('toggle-pause', m)" class="p-2 rounded-lg transition-colors cursor-pointer" :class="m.paused ? 'text-green-500 hover:bg-slate-100 dark:hover:bg-slate-800' : 'text-slate-400 dark:text-slate-500 hover:text-yellow-500 hover:bg-slate-100 dark:hover:bg-slate-800'" :title="m.paused ? '恢复监控' : '暂停监控'">
             <i :class="m.paused ? 'fas fa-play' : 'fas fa-pause'" class="text-sm"></i>
           </button>
           <button @click="$emit('open-config', m)" class="p-2 text-slate-500 hover:text-purple-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer" title="配置监控"><i class="fas fa-sliders-h text-sm"></i></button>
@@ -106,7 +109,7 @@
               <i class="fas fa-ellipsis-h text-sm"></i>
             </button>
             <div v-if="openMenuId === m.id" @click.stop data-more-menu class="absolute right-full top-1/2 z-50 mr-2 w-36 -translate-y-1/2 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-xs shadow-xl dark:border-slate-700 dark:bg-slate-900">
-              <button type="button" @click="runMore('view-logs', m)" class="w-full px-3 py-2 text-left text-slate-600 hover:bg-slate-100 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-blue-400 cursor-pointer">
+              <button v-if="listKind !== 'bookmark'" type="button" @click="runMore('view-logs', m)" class="w-full px-3 py-2 text-left text-slate-600 hover:bg-slate-100 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-blue-400 cursor-pointer">
                 <i class="fas fa-list-ul w-4"></i> 查看日志
               </button>
               <button type="button" @click="runMore('clone', m)" class="w-full px-3 py-2 text-left text-slate-600 hover:bg-slate-100 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-indigo-400 cursor-pointer">
@@ -132,6 +135,7 @@ import { formatIntervalLabel, parseTags, getAdminVisitUrl } from '../../utils/mo
 const props = defineProps({
     monitors: Array, filteredMonitors: Array, allTags: Array,
     activeTag: String, selectedIds: Array, searchQuery: String, sortKey: String,
+    listKind: { type: String, default: 'monitor' },
 });
 const emit = defineEmits([
     'update:activeTag', 'update:selectedIds', 'update:searchQuery', 'update:sortKey',
