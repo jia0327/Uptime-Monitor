@@ -21,6 +21,14 @@ export const getVisitUrl = (monitor) => {
   return null;
 };
 
+/** 管理后台展示/点击用的跳转 URL；检测 URL 不展示 */
+export const getAdminVisitUrl = (monitor) => {
+  const link = monitor?.link_url?.trim();
+  if (link) return link;
+  if (isBookmark(monitor)) return monitor?.url?.trim() || null;
+  return null;
+};
+
 export const formatIntervalLabel = (interval) => {
   const opt = MONITOR_INTERVAL_OPTIONS.find(o => o.value === Number(interval));
   return opt ? opt.label : `${interval}s`;

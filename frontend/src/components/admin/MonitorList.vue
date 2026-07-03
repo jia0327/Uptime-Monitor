@@ -46,7 +46,11 @@
         </div>
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-2 mb-0.5">
-            <h3 class="font-semibold text-slate-900 dark:text-white truncate">{{ m.name }}</h3>
+            <a v-if="getAdminVisitUrl(m)" :href="getAdminVisitUrl(m)" target="_blank" rel="noopener" :title="getAdminVisitUrl(m)"
+              class="font-semibold text-slate-900 dark:text-white truncate underline underline-offset-[3px] decoration-slate-400/50 hover:decoration-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors">
+              {{ m.name }}
+            </a>
+            <h3 v-else class="font-semibold text-slate-900 dark:text-white truncate">{{ m.name }}</h3>
             <span class="text-[10px] font-mono text-slate-600 shrink-0">{{ m.method || 'GET' }}</span>
             <span v-if="m.interval === 0" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400">书签</span>
             <span v-if="m.is_private === 1" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-400"><i class="fas fa-lock text-[8px] mr-0.5"></i>私密</span>
@@ -54,12 +58,6 @@
             <span v-if="m.status === 'RETRYING'" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-yellow-500/20 text-yellow-400">重试中</span>
             <span v-if="m.paused" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-700 text-slate-400">已暂停</span>
           </div>
-          <a :href="m.url" target="_blank" class="text-xs text-slate-500 hover:text-green-400 font-mono flex items-center gap-1 truncate max-w-xs transition-colors">
-            <span class="text-slate-600 shrink-0">检测</span> {{ m.url }} <i class="fas fa-external-link-alt text-[8px] opacity-40"></i>
-          </a>
-          <a v-if="m.link_url" :href="m.link_url" target="_blank" class="text-xs text-slate-500 hover:text-blue-400 font-mono flex items-center gap-1 truncate max-w-xs transition-colors mt-0.5">
-            <span class="text-slate-600 shrink-0">跳转</span> {{ m.link_url }} <i class="fas fa-external-link-alt text-[8px] opacity-40"></i>
-          </a>
           <div class="flex flex-wrap items-center gap-1.5 mt-1">
             <span v-if="m.keyword" class="text-[10px] text-slate-600 flex items-center gap-1"><i class="fas fa-filter text-[8px]"></i>{{ m.keyword }}</span>
             <span v-for="tag in parseTags(m.tags)" :key="tag" class="tag-chip">{{ tag }}</span>
@@ -129,7 +127,7 @@
 import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import Sortable from 'sortablejs';
 import { formatDateFull, formatExpiryDate, getDaysRemaining, getExpiryClassAdmin } from '../../utils/format';
-import { formatIntervalLabel, parseTags } from '../../utils/monitor';
+import { formatIntervalLabel, parseTags, getAdminVisitUrl } from '../../utils/monitor';
 
 const props = defineProps({
     monitors: Array, filteredMonitors: Array, allTags: Array,
