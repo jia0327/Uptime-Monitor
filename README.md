@@ -30,7 +30,8 @@ Uptime Monitor 是一个基于 Cloudflare Workers、Pages 和 D1 的轻量级网
 
 - 公开状态页支持标签分组、事件公告、计划维护和自定义 Logo。
 - **书签模式（不检测）**：监测频率选「不检测」后，条目仅作为链接展示，不发起 HTTP 探测，适合内网 NAS、旁路由等 Worker 无法访问的服务。
-- **私密监控**：勾选后公开状态页仍显示名称与在线状态，但**不展示 URL 链接**，并显示锁标识；后台仍可正常管理与检测，适合 NodeWarden 等敏感服务。
+- **跳转链接**：状态页展示与点击用；**检测 URL 仅用于后台探测，公开页不展示**。
+- **私密监控**：勾选后公开页隐藏跳转链接，仅展示名称与在线状态。
 - 状态页顶部提供「管理后台」入口，无需滚到页脚。
 
 ### 管理后台
@@ -45,9 +46,10 @@ Uptime Monitor 是一个基于 Cloudflare Workers、Pages 和 D1 的轻量级网
 
 | 模式 | 公开页 | HTTP 检测 | 典型用途 |
 |---|---|---|---|
-| 普通监控 | 显示名称 + 链接 + 状态 | 是 | 公网网站、API |
+| 普通监控 | 显示名称 + 跳转链接 + 状态 | 是 | 公网网站、API |
+| 检测/跳转分离 | 显示跳转链接 + 状态（检测 URL 不公开） | 是 | 健康检查与登录页不同 |
 | 书签（不检测） | 显示名称 + 链接 | 否 | 内网 NAS、旁路由 |
-| 私密监控 | 显示名称 + 状态，**隐藏链接** | 是 | 敏感管理面板 |
+| 私密监控 | 显示名称 + 状态，**隐藏跳转链接** | 是 | 敏感管理面板 |
 | 书签 + 私密 | 显示名称，**隐藏链接** | 否 | 内网敏感服务链接 |
 
 ## 快速了解
@@ -59,7 +61,7 @@ Uptime Monitor 是一个基于 Cloudflare Workers、Pages 和 D1 的轻量级网
 | 是否支持公开状态页 | 支持 |
 | 是否支持后台管理 | 支持，路径为 `/admin`，状态页顶部也可进入 |
 | 是否支持书签/内网链接 | 支持，监测频率选「不检测」 |
-| 是否支持私密监控 | 支持，公开页隐藏 URL 并显示锁标识 |
+| 是否支持私密监控 | 支持，公开页隐藏跳转链接 |
 | 是否支持告警 | 支持企业微信、飞书、钉钉、Webhook、Telegram、Email |
 | 是否适合国内用户 | 前端资源本地打包，通知渠道优先推荐企业微信、飞书、钉钉 |
 | 在线 Demo | [https://uptime.nianshu2022.cn](https://uptime.nianshu2022.cn) |
@@ -152,6 +154,12 @@ npx wrangler d1 list
 
 ```bash
 npx wrangler d1 execute uptime-db --remote --command="ALTER TABLE monitors ADD COLUMN is_private INTEGER DEFAULT 0;"
+```
+
+若从旧版本升级至支持「检测/跳转链接分离」的版本，需执行：
+
+```bash
+npx wrangler d1 execute uptime-db --remote --command="ALTER TABLE monitors ADD COLUMN link_url TEXT;"
 ```
 
 「不检测 / 书签」模式使用 `interval = 0`，无需额外数据库字段。若列已存在，SQLite 会报错，可忽略。

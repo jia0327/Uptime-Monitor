@@ -16,7 +16,8 @@
             <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2"><i class="fas fa-edit text-green-500 text-[10px]"></i> 基础信息</h4>
             <div class="space-y-3">
               <div><label class="block text-xs font-medium text-slate-400 mb-1">网站名称</label><input v-model="configForm.name" class="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm bg-slate-800/80 text-white focus:border-green-500 outline-none"></div>
-              <div><label class="block text-xs font-medium text-slate-400 mb-1">URL 地址</label><input v-model="configForm.url" class="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm bg-slate-800/80 text-white focus:border-green-500 outline-none font-mono"></div>
+              <div><label class="block text-xs font-medium text-slate-400 mb-1">检测 URL</label><input v-model="configForm.url" placeholder="用于 HTTP 探测的地址" class="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm bg-slate-800/80 text-white focus:border-green-500 outline-none font-mono"></div>
+              <div><label class="block text-xs font-medium text-slate-400 mb-1">跳转链接 <span class="text-slate-600 font-normal">可选</span></label><input v-model="configForm.link_url" placeholder="状态页展示与点击跳转，检测 URL 不会公开" class="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm bg-slate-800/80 text-white focus:border-green-500 outline-none font-mono"></div>
               <div class="grid grid-cols-2 gap-3">
                 <div><label class="block text-xs font-medium text-slate-400 mb-1">关键词验证</label><input v-model="configForm.keyword" placeholder="留空则不检测" class="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm bg-slate-800/80 text-white focus:border-green-500 outline-none"></div>
                 <div><label class="block text-xs font-medium text-slate-400 mb-1">User-Agent</label><input v-model="configForm.user_agent" placeholder="Uptime-Monitor/1.0" class="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm bg-slate-800/80 text-white focus:border-green-500 outline-none font-mono text-xs"></div>
@@ -50,7 +51,7 @@
           <div>
             <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">可见性</h4>
             <label class="flex items-center justify-between p-3 rounded-lg bg-slate-900/50 cursor-pointer">
-              <div class="flex items-center gap-2 text-sm text-slate-300"><i class="fas fa-lock text-purple-400 w-4"></i><div><span>私密监控</span><p class="text-xs text-slate-500 mt-0.5">公开状态页不显示链接</p></div></div>
+              <div class="flex items-center gap-2 text-sm text-slate-300"><i class="fas fa-lock text-purple-400 w-4"></i><div><span>私密监控</span><p class="text-xs text-slate-500 mt-0.5">公开页隐藏跳转链接，仅展示名称与状态</p></div></div>
               <input type="checkbox" v-model="configForm.is_private" class="w-4 h-4 rounded accent-purple-500">
             </label>
           </div>

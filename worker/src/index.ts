@@ -9,6 +9,7 @@ interface Monitor {
   id: number;
   name: string;
   url: string;
+  link_url: string | null;        // 跳转链接（状态页点击用）
   method: string;
   request_headers: string | null; // JSON 格式自定义请求头
   request_body: string | null;    // POST 请求体
@@ -33,7 +34,7 @@ interface Monitor {
   last_alert_ssl: string | null;
   last_alert_domain: string | null;
   sort_order: number;             // 拖拽排序顺序
-  is_private: number;             // 私密监控 (1=公开页不显示链接)
+  is_private: number;             // 私密监控 (1=公开页隐藏跳转链接)
   created_at: string;
 }
 
@@ -88,7 +89,7 @@ type Bindings = {
 
 const textEncoder = new TextEncoder();
 const MONITOR_COLUMNS = `
-  id, name, url, method, request_headers, request_body, interval, status,
+  id, name, url, link_url, method, request_headers, request_body, interval, status,
   retry_count, last_check, keyword, user_agent, tags, domain_expiry, cert_expiry,
   check_info_status, paused, check_ssl, check_domain, alert_silence_uptime,
   alert_silence_ssl, alert_silence_domain, alert_error_rate, last_alert_uptime,
@@ -96,10 +97,13 @@ const MONITOR_COLUMNS = `
 `;
 
 function sanitizePublicMonitor<T extends Record<string, unknown>>(monitor: T): T {
+  const result = { ...monitor, url: null };
   if (Number(monitor.is_private) === 1) {
-    return { ...monitor, url: null };
+    result.link_url = null;
+  } else if (result.link_url === '') {
+    result.link_url = null;
   }
-  return monitor;
+  return result;
 }
 
 function getAllowedOrigins(env: Bindings): string[] {
@@ -275,8 +279,8 @@ app.get('/monitors', async (c) => {
 app.get('/monitors/public', async (c) => {
   try {
     const { results } = await c.env.DB.prepare(
-      'SELECT id, name, url, status, last_check, cert_expiry, domain_expiry, paused, tags, interval, is_private FROM monitors ORDER BY sort_order ASC, created_at ASC'
-    ).all<Pick<Monitor, 'id' | 'name' | 'url' | 'status' | 'last_check' | 'cert_expiry' | 'domain_expiry' | 'paused' | 'tags' | 'interval' | 'is_private'>>();
+      'SELECT id, name, url, link_url, status, last_check, cert_expiry, domain_expiry, paused, tags, interval, is_private FROM monitors ORDER BY sort_order ASC, created_at ASC'
+    ).all<Pick<Monitor, 'id' | 'name' | 'url' | 'link_url' | 'status' | 'last_check' | 'cert_expiry' | 'domain_expiry' | 'paused' | 'tags' | 'interval' | 'is_private'>>();
     return c.json(results.map(m => sanitizePublicMonitor(m as Record<string, unknown>)));
   } catch (e: unknown) {
     return c.json({ error: e instanceof Error ? e.message : 'Unknown error' }, 500);
@@ -287,7 +291,7 @@ app.get('/monitors/public', async (c) => {
 app.get('/monitors/public/details', async (c) => {
   try {
     const { results: monitors } = await c.env.DB.prepare(
-      'SELECT id, name, url, status, last_check, cert_expiry, domain_expiry, paused, tags, interval, is_private FROM monitors ORDER BY sort_order ASC, created_at ASC'
+      'SELECT id, name, url, link_url, status, last_check, cert_expiry, domain_expiry, paused, tags, interval, is_private FROM monitors ORDER BY sort_order ASC, created_at ASC'
     ).all();
     if (!monitors || monitors.length === 0) return c.json({ monitors: [] });
 
@@ -368,6 +372,7 @@ app.post('/monitors', async (c) => {
   try {
     const body = await c.req.json<Partial<Monitor>>();
     const { name, url, interval, keyword, user_agent, tags, request_headers, request_body } = body;
+    const linkUrl = typeof body.link_url === 'string' ? body.link_url.trim() || null : null;
 
     if (!name || !url) {
       return c.json({ error: 'Missing name or url' }, 400);
@@ -377,10 +382,10 @@ app.post('/monitors', async (c) => {
     const isPrivate = body.is_private ? 1 : 0;
 
     const result = await c.env.DB.prepare(
-      `INSERT INTO monitors (name, url, method, interval, keyword, user_agent, tags, request_headers, request_body, is_private)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO monitors (name, url, link_url, method, interval, keyword, user_agent, tags, request_headers, request_body, is_private)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
-      name, url, method,
+      name, url, linkUrl, method,
       normalizeInterval(interval),
       keyword || null,
       user_agent || null,
@@ -450,6 +455,11 @@ app.patch('/monitors/:id/config', async (c) => {
           fields.push(`${col} = ?`); values.push(body[key] || null);
         }
       }
+    }
+
+    if (body.link_url !== undefined) {
+      fields.push('link_url = ?');
+      values.push(typeof body.link_url === 'string' ? (body.link_url.trim() || null) : null);
     }
 
     // 数值/开关字段

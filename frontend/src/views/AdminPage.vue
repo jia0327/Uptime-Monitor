@@ -180,7 +180,7 @@ const showIncidents = ref(false);
 const showSettings = ref(false);
 
 // ── 添加监控 ──
-const newMonitor = ref({ name: '', url: '', method: 'GET', keyword: '', user_agent: '', tags: '', request_headers: '', request_body: '', interval: 300, check_ssl: true, check_domain: true, alert_silence_hours: '24', alert_error_rate: 0, is_private: false });
+const newMonitor = ref({ name: '', url: '', link_url: '', method: 'GET', keyword: '', user_agent: '', tags: '', request_headers: '', request_body: '', interval: 300, check_ssl: true, check_domain: true, alert_silence_hours: '24', alert_error_rate: 0, is_private: false });
 const submitting = ref(false);
 
 // ── 配置面板 ──
@@ -237,7 +237,7 @@ const filteredMonitors = computed(() => {
     let list = monitors.value;
     if (activeTag.value) list = list.filter(m => m.tags && m.tags.split(',').map(t => t.trim()).includes(activeTag.value));
     const q = searchQuery.value.trim().toLowerCase();
-    if (q) list = list.filter(m => (m.name && m.name.toLowerCase().includes(q)) || (m.url && m.url.toLowerCase().includes(q)));
+    if (q) list = list.filter(m => (m.name && m.name.toLowerCase().includes(q)) || (m.url && m.url.toLowerCase().includes(q)) || (m.link_url && m.link_url.toLowerCase().includes(q)));
     if (sortKey.value) {
         list = [...list].sort((a, b) => {
             switch (sortKey.value) {
@@ -293,7 +293,7 @@ const addMonitor = async () => {
     try {
         const body = { ...newMonitor.value, check_ssl: newMonitor.value.check_ssl ? 1 : 0, check_domain: newMonitor.value.check_domain ? 1 : 0, is_private: newMonitor.value.is_private ? 1 : 0, interval: Number(newMonitor.value.interval) };
         const res = await authFetch(`${API_BASE}/monitors`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-        if (res.ok) { newMonitor.value = { name: '', url: '', method: 'GET', keyword: '', user_agent: '', tags: '', request_headers: '', request_body: '', interval: 300, check_ssl: true, check_domain: true, alert_silence_hours: '24', alert_error_rate: 0, is_private: false }; showAddModal.value = false; addToast('监控添加成功', 'success'); fetchMonitors(); }
+        if (res.ok) { newMonitor.value = { name: '', url: '', link_url: '', method: 'GET', keyword: '', user_agent: '', tags: '', request_headers: '', request_body: '', interval: 300, check_ssl: true, check_domain: true, alert_silence_hours: '24', alert_error_rate: 0, is_private: false }; showAddModal.value = false; addToast('监控添加成功', 'success'); fetchMonitors(); }
         else { const d = await res.json(); addToast(d.error || '添加失败', 'error'); }
     } catch { addToast('网络错误', 'error'); }
     finally { submitting.value = false; }
@@ -319,21 +319,21 @@ const togglePause = async (m) => {
 
 // ── 克隆 ──
 const cloneMonitor = (m) => {
-    newMonitor.value = { name: m.name + ' (Copy)', url: m.url, method: m.method || 'GET', keyword: m.keyword || '', user_agent: m.user_agent || '', tags: m.tags || '', request_headers: m.request_headers || '', request_body: m.request_body || '', interval: m.interval ?? 300, check_ssl: m.check_ssl !== 0, check_domain: m.check_domain !== 0, alert_silence_hours: m.alert_silence_uptime || 24, alert_error_rate: m.alert_error_rate || 0, is_private: m.is_private === 1 };
+    newMonitor.value = { name: m.name + ' (Copy)', url: m.url, link_url: m.link_url || '', method: m.method || 'GET', keyword: m.keyword || '', user_agent: m.user_agent || '', tags: m.tags || '', request_headers: m.request_headers || '', request_body: m.request_body || '', interval: m.interval ?? 300, check_ssl: m.check_ssl !== 0, check_domain: m.check_domain !== 0, alert_silence_hours: m.alert_silence_uptime || 24, alert_error_rate: m.alert_error_rate || 0, is_private: m.is_private === 1 };
     showAddModal.value = true;
 };
 
 // ── 配置 ──
 const openConfig = (m) => {
     configTarget.value = m;
-    configForm.value = { name: m.name || '', url: m.url || '', method: m.method || 'GET', keyword: m.keyword || '', user_agent: m.user_agent || '', tags: m.tags || '', request_headers: m.request_headers || '', request_body: m.request_body || '', interval: m.interval ?? 300, check_ssl: m.check_ssl !== 0, check_domain: m.check_domain !== 0, alert_silence_uptime: m.alert_silence_uptime ?? 24, alert_silence_ssl: m.alert_silence_ssl ?? 24, alert_silence_domain: m.alert_silence_domain ?? 24, alert_error_rate: m.alert_error_rate ?? 0, is_private: m.is_private === 1 };
+    configForm.value = { name: m.name || '', url: m.url || '', link_url: m.link_url || '', method: m.method || 'GET', keyword: m.keyword || '', user_agent: m.user_agent || '', tags: m.tags || '', request_headers: m.request_headers || '', request_body: m.request_body || '', interval: m.interval ?? 300, check_ssl: m.check_ssl !== 0, check_domain: m.check_domain !== 0, alert_silence_uptime: m.alert_silence_uptime ?? 24, alert_silence_ssl: m.alert_silence_ssl ?? 24, alert_silence_domain: m.alert_silence_domain ?? 24, alert_error_rate: m.alert_error_rate ?? 0, is_private: m.is_private === 1 };
     showConfig.value = true;
 };
 
 const saveConfig = async () => {
     if (!configTarget.value) return; configSaving.value = true;
     try {
-        const body = { name: configForm.value.name, url: configForm.value.url, method: configForm.value.method || 'GET', keyword: configForm.value.keyword, user_agent: configForm.value.user_agent, tags: configForm.value.tags || '', request_headers: configForm.value.request_headers || '', request_body: configForm.value.request_body || '', interval: Number(configForm.value.interval), check_ssl: configForm.value.check_ssl ? 1 : 0, check_domain: configForm.value.check_domain ? 1 : 0, is_private: configForm.value.is_private ? 1 : 0, alert_silence_uptime: Number(configForm.value.alert_silence_uptime), alert_silence_ssl: Number(configForm.value.alert_silence_ssl), alert_silence_domain: Number(configForm.value.alert_silence_domain), alert_error_rate: Number(configForm.value.alert_error_rate ?? 0) };
+        const body = { name: configForm.value.name, url: configForm.value.url, link_url: configForm.value.link_url || '', method: configForm.value.method || 'GET', keyword: configForm.value.keyword, user_agent: configForm.value.user_agent, tags: configForm.value.tags || '', request_headers: configForm.value.request_headers || '', request_body: configForm.value.request_body || '', interval: Number(configForm.value.interval), check_ssl: configForm.value.check_ssl ? 1 : 0, check_domain: configForm.value.check_domain ? 1 : 0, is_private: configForm.value.is_private ? 1 : 0, alert_silence_uptime: Number(configForm.value.alert_silence_uptime), alert_silence_ssl: Number(configForm.value.alert_silence_ssl), alert_silence_domain: Number(configForm.value.alert_silence_domain), alert_error_rate: Number(configForm.value.alert_error_rate ?? 0) };
         const res = await authFetch(`${API_BASE}/monitors/${configTarget.value.id}/config`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         if (res.ok) { addToast('配置已保存', 'success'); showConfig.value = false; fetchMonitors(); }
         else { const d = await res.json(); addToast(d.error || '保存失败', 'error'); }
@@ -392,7 +392,7 @@ const handleReorder = async (ids) => {
 
 // ── 导出 ──
 const exportMonitors = () => {
-    const data = monitors.value.map(m => ({ name: m.name, url: m.url, method: m.method, interval: m.interval, keyword: m.keyword, user_agent: m.user_agent, tags: m.tags, request_headers: m.request_headers, request_body: m.request_body, is_private: m.is_private === 1 ? 1 : 0 }));
+    const data = monitors.value.map(m => ({ name: m.name, url: m.url, link_url: m.link_url || '', method: m.method, interval: m.interval, keyword: m.keyword, user_agent: m.user_agent, tags: m.tags, request_headers: m.request_headers, request_body: m.request_body, is_private: m.is_private === 1 ? 1 : 0 }));
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const a = document.createElement('a'); a.style.display = 'none'; a.href = URL.createObjectURL(blob); a.download = `uptime-monitors-${new Date().toISOString().slice(0,10)}.json`;
     document.body.appendChild(a); a.click(); setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 200);

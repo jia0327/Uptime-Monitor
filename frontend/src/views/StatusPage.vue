@@ -3,8 +3,8 @@
     <StatusHeader :loading="loading" :isDark="isDark" :siteSettings="siteSettings" @toggle-theme="toggleTheme" />
 
     <main class="flex-1 max-w-5xl w-full mx-auto px-6 py-10">
-      <!-- 英雄状态区 -->
-      <HeroBanner v-if="monitors.length > 0" :monitors="monitors" :activeMonitors="activeMonitors"
+      <!-- 英雄状态区（仅统计活跃监控） -->
+      <HeroBanner v-if="activeMonitors.length > 0" :monitors="monitors" :activeMonitors="activeMonitors"
         :allUp="allUp" :hasRetrying="hasRetrying" :hasDown="hasDown" :avgLatency="avgLatency" :error="error"
         @retry="fetchMonitors" />
 
@@ -45,17 +45,20 @@
         </div>
       </div>
 
-      <!-- 监控列表 -->
-      <div v-if="monitors.length > 0" class="fade-up-d1">
+      <!-- 服务监控 -->
+      <div v-if="monitoredItems.length > 0" class="fade-up-d1">
         <div class="flex items-center justify-between mb-5">
           <div class="flex items-center gap-3">
             <div class="w-1 h-5 rounded-full bg-emerald-500"></div>
-            <h2 class="text-sm font-bold text-slate-600 dark:text-slate-400">服务状态</h2>
+            <div>
+              <h2 class="text-sm font-bold text-slate-600 dark:text-slate-400">服务监控</h2>
+              <p class="text-[11px] text-slate-500 dark:text-slate-600 mt-0.5">可用性检测与状态统计</p>
+            </div>
           </div>
           <div class="flex items-center gap-3 text-[11px] font-mono text-slate-500 dark:text-slate-600">
             <span class="flex items-center gap-1.5">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500/50"></span>
-              {{ activeMonitors.length }} 个活跃监控
+              {{ activeMonitors.length }} 个活跃
             </span>
             <span v-if="lastUpdated" class="text-slate-400 dark:text-slate-500">·</span>
             <span v-if="lastUpdated" class="text-slate-400 dark:text-slate-500">{{ lastUpdated }}</span>
@@ -63,7 +66,7 @@
         </div>
 
         <div class="space-y-6">
-          <section v-for="section in monitorSections" :key="section.name" class="space-y-3">
+          <section v-for="section in monitorSections" :key="'mon-' + section.name" class="space-y-3">
             <div v-if="monitorSections.length > 1" class="flex items-center justify-between">
               <h3 class="text-xs font-bold text-slate-500 dark:text-slate-500 flex items-center gap-2">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
@@ -72,6 +75,35 @@
               <span class="text-[11px] font-mono text-slate-400 dark:text-slate-600">{{ section.items.length }} 项</span>
             </div>
             <MonitorCard v-for="(m, idx) in section.items" :key="m.id" :monitor="m" :index="idx" />
+          </section>
+        </div>
+      </div>
+
+      <!-- 书签 -->
+      <div v-if="bookmarkItems.length > 0" class="fade-up-d2" :class="monitoredItems.length > 0 ? 'mt-10' : ''">
+        <div class="flex items-center justify-between mb-5">
+          <div class="flex items-center gap-3">
+            <div class="w-1 h-5 rounded-full bg-blue-500"></div>
+            <div>
+              <h2 class="text-sm font-bold text-slate-600 dark:text-slate-400">书签</h2>
+              <p class="text-[11px] text-slate-500 dark:text-slate-600 mt-0.5">内网或私有链接，不参与可用性检测</p>
+            </div>
+          </div>
+          <span class="text-[11px] font-mono text-slate-400 dark:text-slate-600">{{ bookmarkItems.length }} 项</span>
+        </div>
+
+        <div class="space-y-5">
+          <section v-for="section in bookmarkSections" :key="'bm-' + section.name" class="space-y-2">
+            <div v-if="bookmarkSections.length > 1" class="flex items-center justify-between px-1">
+              <h3 class="text-xs font-bold text-slate-500 dark:text-slate-500 flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                {{ section.name }}
+              </h3>
+              <span class="text-[11px] font-mono text-slate-400 dark:text-slate-600">{{ section.items.length }} 项</span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <BookmarkCard v-for="(m, idx) in section.items" :key="m.id" :monitor="m" :index="idx" />
+            </div>
           </section>
         </div>
       </div>
@@ -86,10 +118,12 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useTheme } from '../composables/useTheme';
 import { API_BASE, fetchT, withRetry } from '../utils/api';
 import { formatDate } from '../utils/format';
+import { isBookmark, groupMonitorsByTag } from '../utils/monitor';
 
 import StatusHeader from '../components/status/StatusHeader.vue';
 import HeroBanner from '../components/status/HeroBanner.vue';
 import MonitorCard from '../components/status/MonitorCard.vue';
+import BookmarkCard from '../components/status/BookmarkCard.vue';
 import StatusFooter from '../components/status/StatusFooter.vue';
 
 const { isDark, toggleTheme } = useTheme('theme');
@@ -102,7 +136,9 @@ const refreshing = ref(false);
 const incidents = ref([]);
 const siteSettings = ref({ site_title: 'Uptime Monitor', site_description: '', site_logo_url: '' });
 
-const activeMonitors = computed(() => monitors.value.filter(m => m.paused !== 1 && m.status !== 'PAUSED' && m.interval !== 0));
+const monitoredItems = computed(() => monitors.value.filter(m => !isBookmark(m)));
+const bookmarkItems = computed(() => monitors.value.filter(m => isBookmark(m)));
+const activeMonitors = computed(() => monitoredItems.value.filter(m => m.paused !== 1 && m.status !== 'PAUSED'));
 const allUp = computed(() => activeMonitors.value.length > 0 && activeMonitors.value.every(m => m.status === 'UP'));
 const hasRetrying = computed(() => activeMonitors.value.some(m => m.status === 'RETRYING'));
 const hasDown = computed(() => activeMonitors.value.some(m => m.status === 'DOWN'));
@@ -111,15 +147,8 @@ const avgLatency = computed(() => {
     if (active.length === 0) return null;
     return Math.round(active.reduce((sum, m) => sum + m.latency, 0) / active.length);
 });
-const monitorSections = computed(() => {
-    const groups = new Map();
-    for (const monitor of monitors.value) {
-        const tag = (monitor.tags || '').split(',').map(t => t.trim()).filter(Boolean)[0] || '未分组';
-        if (!groups.has(tag)) groups.set(tag, []);
-        groups.get(tag).push(monitor);
-    }
-    return [...groups.entries()].map(([name, items]) => ({ name, items }));
-});
+const monitorSections = computed(() => groupMonitorsByTag(monitoredItems.value));
+const bookmarkSections = computed(() => groupMonitorsByTag(bookmarkItems.value));
 
 const fetchMonitors = async () => {
     loading.value = true;

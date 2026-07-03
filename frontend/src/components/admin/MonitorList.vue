@@ -55,7 +55,10 @@
             <span v-if="m.paused" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-700 text-slate-400">已暂停</span>
           </div>
           <a :href="m.url" target="_blank" class="text-xs text-slate-500 hover:text-green-400 font-mono flex items-center gap-1 truncate max-w-xs transition-colors">
-            {{ m.url }} <i class="fas fa-external-link-alt text-[8px] opacity-40"></i>
+            <span class="text-slate-600 shrink-0">检测</span> {{ m.url }} <i class="fas fa-external-link-alt text-[8px] opacity-40"></i>
+          </a>
+          <a v-if="m.link_url" :href="m.link_url" target="_blank" class="text-xs text-slate-500 hover:text-blue-400 font-mono flex items-center gap-1 truncate max-w-xs transition-colors mt-0.5">
+            <span class="text-slate-600 shrink-0">跳转</span> {{ m.link_url }} <i class="fas fa-external-link-alt text-[8px] opacity-40"></i>
           </a>
           <div class="flex flex-wrap items-center gap-1.5 mt-1">
             <span v-if="m.keyword" class="text-[10px] text-slate-600 flex items-center gap-1"><i class="fas fa-filter text-[8px]"></i>{{ m.keyword }}</span>

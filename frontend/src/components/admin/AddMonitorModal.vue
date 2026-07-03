@@ -23,10 +23,17 @@
                 <input v-model="newMonitor.name" placeholder="例如: 我的博客" autofocus class="input-field w-full border border-slate-700 rounded-xl px-4 py-3 text-sm bg-slate-800/80 text-white focus:border-green-500 outline-none placeholder-slate-600">
               </div>
               <div>
-                <label class="block text-sm font-medium text-slate-300 mb-2">URL 地址 <span class="text-red-400">*</span></label>
+                <label class="block text-sm font-medium text-slate-300 mb-2">检测 URL <span class="text-red-400">*</span></label>
                 <div class="relative">
-                  <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-500"><i class="fas fa-link text-xs"></i></span>
-                  <input v-model="newMonitor.url" placeholder="https://example.com" @keyup.enter="$emit('submit')" class="input-field w-full border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-sm bg-slate-800/80 text-white focus:border-green-500 outline-none font-mono placeholder-slate-600">
+                  <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-500"><i class="fas fa-heartbeat text-xs"></i></span>
+                  <input v-model="newMonitor.url" placeholder="https://example.com/health" @keyup.enter="$emit('submit')" class="input-field w-full border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-sm bg-slate-800/80 text-white focus:border-green-500 outline-none font-mono placeholder-slate-600">
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">跳转链接 <span class="text-xs font-normal text-slate-500">可选</span></label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-500"><i class="fas fa-external-link-alt text-xs"></i></span>
+                  <input v-model="newMonitor.link_url" placeholder="https://example.com/login" @keyup.enter="$emit('submit')" class="input-field w-full border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-sm bg-slate-800/80 text-white focus:border-green-500 outline-none font-mono placeholder-slate-600">
                 </div>
               </div>
             </div>
@@ -107,7 +114,7 @@
               <input type="checkbox" v-model="newMonitor.is_private" class="w-5 h-5 rounded accent-purple-500">
               <div class="flex items-center gap-2">
                 <div class="w-8 h-8 bg-purple-500/15 rounded-lg flex items-center justify-center"><i class="fas fa-lock text-purple-400 text-xs"></i></div>
-                <div><span class="text-sm font-medium text-slate-300">私密监控</span><p class="text-xs text-slate-500">公开状态页不显示链接，后台仍可查看</p></div>
+                <div><span class="text-sm font-medium text-slate-300">私密监控</span><p class="text-xs text-slate-500">公开页隐藏跳转链接，仅展示名称与状态</p></div>
               </div>
             </label>
           </div>

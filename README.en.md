@@ -30,7 +30,8 @@ It is not meant to replace large observability platforms with distributed probes
 
 - Public status page with tag grouping, incidents, maintenance windows, and custom logo support.
 - **Bookmark mode (no checks)**: when interval is set to “no checks”, the entry is shown as a link only and no HTTP probe runs. Useful for internal NAS, side routers, or other unreachable URLs.
-- **Private monitors**: the public page still shows the name and status, but **hides the URL** and shows a lock badge. Admin keeps full URL access and checks. Useful for sensitive panels such as admin tools.
+- **Visit link**: shown on the status page for clicks; the **check URL is never exposed publicly**.
+- **Private monitors**: the public page hides the visit link and shows only name and status.
 - Admin entry is available in the status page header, not only in the footer.
 
 ### Admin dashboard
@@ -45,9 +46,10 @@ It is not meant to replace large observability platforms with distributed probes
 
 | Mode | Public page | HTTP checks | Typical use |
 |---|---|---|---|
-| Normal monitor | Name + link + status | Yes | Public websites, APIs |
+| Normal monitor | Name + visit link + status | Yes | Public websites, APIs |
+| Split check / visit URL | Visit link + status (check URL hidden) | Yes | Health endpoint vs login page |
 | Bookmark (no checks) | Name + link | No | Internal NAS, side router |
-| Private monitor | Name + status, **link hidden** | Yes | Sensitive admin panels |
+| Private monitor | Name + status, **visit link hidden** | Yes | Sensitive admin panels |
 | Bookmark + private | Name only, **link hidden** | No | Sensitive internal links |
 
 ## Quick Facts
@@ -59,7 +61,7 @@ It is not meant to replace large observability platforms with distributed probes
 | Public status page | Yes |
 | Admin dashboard | Yes, at `/admin`; also linked from the status page header |
 | Bookmark / internal links | Yes, set interval to “no checks” |
-| Private monitors | Yes, public page hides URL and shows a lock badge |
+| Private monitors | Yes; public page hides visit link |
 | Notification channels | WeCom, Feishu, DingTalk, Webhook, Telegram, Email |
 | Mainland China friendliness | Frontend assets are bundled locally; WeCom, Feishu, and DingTalk are recommended first |
 | Online demo | [https://uptime.nianshu2022.cn](https://uptime.nianshu2022.cn) |
@@ -152,6 +154,12 @@ To upgrade to a version with **private monitors**, run:
 
 ```bash
 npx wrangler d1 execute uptime-db --remote --command="ALTER TABLE monitors ADD COLUMN is_private INTEGER DEFAULT 0;"
+```
+
+To upgrade to a version with **split check / visit URLs**, run:
+
+```bash
+npx wrangler d1 execute uptime-db --remote --command="ALTER TABLE monitors ADD COLUMN link_url TEXT;"
 ```
 
 Bookmark mode uses `interval = 0` and needs no extra column. If the column already exists, SQLite will error and you can ignore it.

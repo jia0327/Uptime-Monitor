@@ -33,10 +33,11 @@
         </div>
 
         <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 pl-5">
-          <a v-if="!isPrivate && monitor.url" :href="monitor.url" target="_blank" rel="noopener" class="text-[11px] sm:text-[13px] font-mono text-slate-500 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors truncate max-w-full sm:max-w-[420px] cursor-pointer flex items-center gap-1.5 group/link">
-            {{ monitor.url }}
+          <a v-if="visitUrl" :href="visitUrl" target="_blank" rel="noopener" class="text-[11px] sm:text-[13px] font-mono text-slate-500 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors truncate max-w-full sm:max-w-[420px] cursor-pointer flex items-center gap-1.5 group/link">
+            {{ visitUrl }}
             <svg class="w-2.5 h-2.5 opacity-70 group-hover/link:opacity-100 transition-opacity duration-200 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
           </a>
+          <span v-else-if="isPrivate" class="text-[11px] text-slate-500 dark:text-slate-600">链接未公开</span>
           <span v-if="!isBookmark" class="text-[10px] sm:text-[11px] font-mono text-slate-400 dark:text-slate-600">{{ formatDate(monitor.last_check) }}</span>
           <span v-if="monitor.cert_expiry && !isBookmark" class="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] sm:text-[11px] font-mono border" :class="getExpiryClass(monitor.cert_expiry)">
             <svg class="w-2.5 h-2.5 sm:w-3 sm:h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
@@ -82,7 +83,7 @@
 <script setup>
 import { computed } from 'vue';
 import { formatDate, getExpiryClass, formatExpiry, formatExpiryDate, latencyClass } from '../../utils/format';
-import { isBookmark as checkBookmark, isPrivate as checkPrivate } from '../../utils/monitor';
+import { isBookmark as checkBookmark, isPrivate as checkPrivate, getVisitUrl as resolveVisitUrl } from '../../utils/monitor';
 import UptimeBar from './UptimeBar.vue';
 
 const props = defineProps({
@@ -92,6 +93,7 @@ const props = defineProps({
 
 const isBookmark = computed(() => checkBookmark(props.monitor));
 const isPrivate = computed(() => checkPrivate(props.monitor));
+const visitUrl = computed(() => resolveVisitUrl(props.monitor));
 
 const sparkline = computed(() => {
     if (isBookmark.value) return null;
