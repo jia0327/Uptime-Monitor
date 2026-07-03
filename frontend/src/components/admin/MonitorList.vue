@@ -47,7 +47,7 @@
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-2 mb-0.5">
             <a v-if="getAdminVisitUrl(m)" :href="getAdminVisitUrl(m)" target="_blank" rel="noopener" :title="getAdminVisitUrl(m)"
-              class="font-semibold text-slate-900 dark:text-white truncate underline underline-offset-[3px] decoration-slate-400/50 hover:decoration-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors">
+              class="font-semibold text-slate-900 dark:text-white min-w-0 truncate underline underline-offset-[3px] decoration-slate-400/50 hover:decoration-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors">
               {{ m.name }}
             </a>
             <h3 v-else class="font-semibold text-slate-900 dark:text-white truncate">{{ m.name }}</h3>

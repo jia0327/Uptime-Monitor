@@ -4,7 +4,25 @@ English | [中文](README.md)
 
 Uptime Monitor is a lightweight website monitoring system built on Cloudflare Workers, Pages, and D1. It supports multi-site uptime checks, SSL certificate and domain expiration checks, multiple notification channels, a public status page, and an admin dashboard. It also works as a **monitoring + bookmark** hub for public sites and internal links.
 
+This repository extends [nianshu2022/Uptime-Monitor](https://github.com/nianshu2022/Uptime-Monitor) with **bookmark mode, split check/visit URLs, private monitors**, and improved link interactions on the status page and admin dashboard.
+
 The project can run within Cloudflare's free tier and does not require a self-hosted server. The frontend uses bundled fonts and icons instead of runtime Google Fonts or icon CDN dependencies, making it friendlier for users in mainland China.
+
+## Differences from upstream
+
+| Capability | Upstream | This repo |
+|---|---|---|
+| Core focus | Public uptime monitoring | **Monitoring + bookmark hub** |
+| Check URL vs visit link | Same URL, shown on public page | **Split**: check URL for probes only; visit link on public page |
+| Bookmark / internal links | Not supported | **No checks** interval for link-only entries |
+| Private monitors | Not supported | Public page **hides visit link**, shows name + status only |
+| Status page links | Name + separate URL row | **Underlined name** as link; full URL on hover |
+| Admin list links | Shows check URL | **Hides check URL**; underlined name jumps to visit link |
+| Tag input | Manual typing | Pick from existing tags or type new ones |
+| Admin entry | Footer only | Also in status page **header** |
+| Bookmark alert UI | — | Irrelevant alert settings hidden in bookmark mode |
+
+> When upgrading from upstream, run the incremental SQL in [Create the D1 database](#create-the-d1-database).
 
 ## Who It Is For
 
@@ -30,12 +48,13 @@ It is not meant to replace large observability platforms with distributed probes
 
 - Public status page with tag grouping, incidents, maintenance windows, and custom logo support.
 - **Bookmark mode (no checks)**: when interval is set to “no checks”, the entry is shown as a link only and no HTTP probe runs. Useful for internal NAS, side routers, or other unreachable URLs.
-- **Visit link**: shown on the status page for clicks; the **check URL is never exposed publicly**.
+- **Visit link**: shown as an **underlined monitor name** on the status page and admin list; hover to see the full URL. The **check URL is used for probes only and is not shown in lists**.
 - **Private monitors**: the public page hides the visit link and shows only name and status.
 - Admin entry is available in the status page header, not only in the footer.
 
 ### Admin dashboard
 
+- Monitor list uses **underlined names** as visit links; check URLs are hidden, with full URL on hover.
 - Tags can be picked from existing labels or typed as new comma-separated values.
 - Admin dashboard with bulk actions, drag-and-drop sorting, JSON import/export, and health checks.
 - Session-based admin authentication so the frontend does not keep a plaintext password.
@@ -46,9 +65,9 @@ It is not meant to replace large observability platforms with distributed probes
 
 | Mode | Public page | HTTP checks | Typical use |
 |---|---|---|---|
-| Normal monitor | Name + visit link + status | Yes | Public websites, APIs |
-| Split check / visit URL | Visit link + status (check URL hidden) | Yes | Health endpoint vs login page |
-| Bookmark (no checks) | Name + link | No | Internal NAS, side router |
+| Normal monitor | Name (underlined link) + status | Yes | Public websites, APIs |
+| Split check / visit URL | Name (underlined link) + status (check URL hidden) | Yes | Health endpoint vs login page |
+| Bookmark (no checks) | Name (underlined link) | No | Internal NAS, side router |
 | Private monitor | Name + status, **visit link hidden** | Yes | Sensitive admin panels |
 | Bookmark + private | Name only, **link hidden** | No | Sensitive internal links |
 
@@ -115,7 +134,7 @@ wrangler login
 Clone the repository:
 
 ```bash
-git clone https://github.com/nianshu2022/Uptime-Monitor.git
+git clone https://github.com/cf-worker-page/Uptime-Monitor.git
 cd Uptime-Monitor
 ```
 
