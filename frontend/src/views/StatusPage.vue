@@ -14,13 +14,17 @@
       </div>
 
       <!-- 无监控项 -->
-      <div v-else-if="!loading && monitors.length === 0" class="text-center py-24 glass rounded-2xl border border-dashed border-slate-200 dark:border-white/[0.06] fade-up-d2">
+      <div v-else-if="!loading && monitoredItems.length === 0" class="text-center py-24 glass rounded-2xl border border-dashed border-slate-200 dark:border-white/[0.06] fade-up-d2">
         <div class="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-white/[0.03] flex items-center justify-center mx-auto mb-4">
           <svg class="w-8 h-8 text-slate-300 dark:text-slate-700" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z"/>
           </svg>
         </div>
         <p class="text-slate-400 dark:text-slate-600 font-mono text-sm tracking-widest">NO MONITORS CONFIGURED</p>
+        <router-link v-if="bookmarkItems.length > 0" to="/bookmarks" class="inline-flex items-center gap-1.5 mt-4 text-xs text-blue-500 hover:text-blue-400 transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z"/></svg>
+          查看 {{ bookmarkItems.length }} 个书签
+        </router-link>
       </div>
 
       <!-- 事件公告 -->
@@ -78,35 +82,6 @@
           </section>
         </div>
       </div>
-
-      <!-- 书签 -->
-      <div v-if="bookmarkItems.length > 0" class="fade-up-d2" :class="monitoredItems.length > 0 ? 'mt-10' : ''">
-        <div class="flex items-center justify-between mb-5">
-          <div class="flex items-center gap-3">
-            <div class="w-1 h-5 rounded-full bg-blue-500"></div>
-            <div>
-              <h2 class="text-sm font-bold text-slate-600 dark:text-slate-400">书签</h2>
-              <p class="text-[11px] text-slate-500 dark:text-slate-600 mt-0.5">内网或私有链接，不参与可用性检测</p>
-            </div>
-          </div>
-          <span class="text-[11px] font-mono text-slate-400 dark:text-slate-600">{{ bookmarkItems.length }} 项</span>
-        </div>
-
-        <div class="space-y-5">
-          <section v-for="section in bookmarkSections" :key="'bm-' + section.name" class="space-y-2">
-            <div v-if="bookmarkSections.length > 1" class="flex items-center justify-between px-1">
-              <h3 class="text-xs font-bold text-slate-500 dark:text-slate-500 flex items-center gap-2">
-                <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
-                {{ section.name }}
-              </h3>
-              <span class="text-[11px] font-mono text-slate-400 dark:text-slate-600">{{ section.items.length }} 项</span>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <BookmarkCard v-for="(m, idx) in section.items" :key="m.id" :monitor="m" :index="idx" />
-            </div>
-          </section>
-        </div>
-      </div>
     </main>
 
     <StatusFooter :loading="loading" :refreshing="refreshing" @refresh="manualRefresh" />
@@ -123,7 +98,6 @@ import { isBookmark, groupMonitorsByTag } from '../utils/monitor';
 import StatusHeader from '../components/status/StatusHeader.vue';
 import HeroBanner from '../components/status/HeroBanner.vue';
 import MonitorCard from '../components/status/MonitorCard.vue';
-import BookmarkCard from '../components/status/BookmarkCard.vue';
 import StatusFooter from '../components/status/StatusFooter.vue';
 
 const { isDark, toggleTheme } = useTheme('theme');
@@ -148,7 +122,6 @@ const avgLatency = computed(() => {
     return Math.round(active.reduce((sum, m) => sum + m.latency, 0) / active.length);
 });
 const monitorSections = computed(() => groupMonitorsByTag(monitoredItems.value));
-const bookmarkSections = computed(() => groupMonitorsByTag(bookmarkItems.value));
 
 const fetchMonitors = async () => {
     loading.value = true;

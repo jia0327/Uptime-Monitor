@@ -7,6 +7,11 @@ const routes = [
         component: () => import('../views/StatusPage.vue'),
     },
     {
+        path: '/bookmarks',
+        name: 'Bookmarks',
+        component: () => import('../views/BookmarksPage.vue'),
+    },
+    {
         path: '/admin',
         name: 'Admin',
         component: () => import('../views/AdminPage.vue'),

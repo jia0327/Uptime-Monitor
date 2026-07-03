@@ -17,6 +17,7 @@ The project can run within Cloudflare's free tier and does not require a self-ho
 | Bookmark / internal links | Not supported | **No checks** interval for link-only entries |
 | Private monitors | Not supported | Public page **hides visit link**, shows name + status only |
 | Status page links | Name + separate URL row | **Underlined name** as link; full URL on hover |
+| Bookmarks | Mixed with monitors on same page | **Dedicated page** (`/bookmarks`) with tag categories |
 | Admin list links | Shows check URL | **Hides check URL**; underlined name jumps to visit link |
 | Tag input | Manual typing | Pick from existing tags or type new ones |
 | Admin entry | Footer only | Also in status page **header** |
@@ -46,7 +47,7 @@ It is not meant to replace large observability platforms with distributed probes
 
 ### Status page and bookmarks
 
-- Public status page with tag grouping, incidents, maintenance windows, and custom logo support.
+- Public status page with tag grouping, incidents, maintenance windows, and custom logo support; **dedicated bookmarks page** (`/bookmarks`) with tag-based categories.
 - **Bookmark mode (no checks)**: when interval is set to “no checks”, the entry is shown as a link only and no HTTP probe runs. Useful for internal NAS, side routers, or other unreachable URLs.
 - **Visit link**: shown as an **underlined monitor name** on the status page and admin list; hover to see the full URL. The **check URL is used for probes only and is not shown in lists**.
 - **Private monitors**: the public page hides the visit link and shows only name and status.

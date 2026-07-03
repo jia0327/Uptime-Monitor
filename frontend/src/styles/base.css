@@ -290,6 +290,13 @@ html:not(.dark) .tag-filter-btn { border-color: #e2e8f0; }
 .tag-filter-btn:not(.active) { color:#64748b; }
 .tag-filter-btn:not(.active):hover { border-color:#22c55e; color:#22c55e; }
 
+/* ── 状态页导航 ── */
+.nav-tab { padding:4px 10px; border-radius:6px; font-size:11px; font-weight:500; color:#64748b; transition: all 0.15s; }
+.nav-tab:hover { color:#334155; }
+.dark .nav-tab:hover { color:#e2e8f0; }
+.nav-tab-active { background:rgba(34,197,94,0.12); color:#16a34a; }
+.dark .nav-tab-active { background:rgba(34,197,94,0.15); color:#4ade80; }
+
 /* ── 批量操作栏 (admin) ── */
 .bulk-bar { background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.2); border-radius:12px; padding:8px 16px; display:flex; align-items:center; gap:12px; }
 

@@ -17,6 +17,10 @@
         </div>
       </div>
       <div class="flex items-center gap-4">
+        <nav class="flex items-center gap-1 p-0.5 rounded-lg bg-black/[0.04] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.06]">
+          <router-link to="/" class="nav-tab" active-class="nav-tab-active">状态</router-link>
+          <router-link to="/bookmarks" class="nav-tab" active-class="nav-tab-active">书签</router-link>
+        </nav>
         <!-- LIVE 指示 -->
         <div class="flex items-center gap-2 px-3 py-1.5 rounded-full glass text-xs">
           <div class="relative">
