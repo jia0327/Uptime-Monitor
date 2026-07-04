@@ -4,22 +4,24 @@
 
 ## 一句话定位
 
-基于 Cloudflare 的轻量级自部署状态监控系统，适合个人站长和小团队监控网站、域名、证书与 HTTP 服务可用性。
+基于 Cloudflare 的轻量级自部署状态监控与书签导航系统 — 监控 + 内网链接收藏二合一，支持检测/跳转分离与私密监控。
 
 ## 核心卖点
 
 - 不需要自建服务器，运行在 Cloudflare Workers、Pages 和 D1。
-- 支持公开状态页、管理后台、事件公告、计划维护和多渠道告警。
-- 监控网站可用性、SSL 证书有效期、域名有效期和关键词校验。
+- **监控 + 书签二合一**：公网可用性监控与内网链接导航同一套系统。
+- **检测/跳转分离**：探测 URL 不公开，状态页只展示跳转链接。
+- **书签模式**：监测频率选「不检测」，适合 NAS、旁路由等内网服务。
+- **私密监控**：公开页隐藏跳转链接，只显示名称与状态。
+- 支持 SSL/域名到期检测、多渠道告警、事件公告与计划维护。
 - 前端资源本地打包，适合国内用户访问。
-- 适合个人项目和小团队，不强行做复杂企业监控平台。
 
 ## 发布前必备
 
 - README 首屏能说明产品定位、适用人群、截图和部署路径。
 - 至少准备一套真实截图：状态页、管理后台、添加监控、通知渠道、事件维护。
 - 准备一个公开 Demo 状态页，后台可以只放截图，不开放真实管理入口。
-- 部署流程从零验证一次：Fork、创建 D1、初始化 schema、部署 Worker、部署 Pages、配置 `WORKER_URL`。
+- 部署流程从零验证一次：克隆仓库、创建 D1、初始化 schema、部署 Worker、部署 Pages、配置 `WORKER_URL`。
 - 给 GitHub 仓库加上 topics：`uptime-monitor`、`status-page`、`cloudflare-workers`、`cloudflare-d1`、`vue`。
 - 检查 LICENSE、README、截图路径、Actions 状态和默认分支。
 
@@ -35,8 +37,8 @@
 
 ## Demo 建议
 
-- 当前 Demo 状态页：`https://uptime.nianshu2022.cn`
-- 当前 Demo 后台：`https://uptime.nianshu2022.cn/admin`
+- 当前 Demo 状态页：`https://uptime-monitor.onlydev.ccwu.cc`
+- 当前 Demo 后台：`https://uptime-monitor.onlydev.ccwu.cc/admin`
 - 当前 Demo 密码：`Qwer1234`
 - 使用一个单独的 Cloudflare 项目部署 Demo，不要混用生产监控实例。
 - Demo 状态页可以配置 3 到 5 个公开站点。
@@ -54,11 +56,13 @@
 
 我做了一个轻量级自部署监控系统 Uptime Monitor，运行在 Cloudflare Workers、Pages 和 D1 上，不需要自建服务器。
 
-它可以监控网站可用性、SSL 证书、域名有效期和关键词校验，支持公开状态页、后台管理、事件公告、计划维护，以及企业微信、飞书、钉钉、Webhook、Telegram、Email 通知。
+它把**网站监控**和**书签导航**合二为一：支持公网可用性、SSL/域名到期检测，也能用「不检测」模式收藏内网 NAS、旁路由等链接；检测 URL 与跳转链接可分离，私密监控可在公开页隐藏链接。
 
-适合个人站长、独立开发者和小团队，用来监控自己的博客、API、产品官网或轻量服务。
+支持公开状态页、独立书签页、后台管理、事件公告、计划维护，以及企业微信、飞书、钉钉、Webhook、Telegram、Email 通知。
 
-项目地址：`https://github.com/nianshu2022/Uptime-Monitor`
+适合个人站长、独立开发者和小团队。
+
+项目地址：`https://github.com/jia0327/Uptime-Monitor`
 
 ## 推广后的第一周
 

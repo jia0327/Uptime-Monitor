@@ -1,100 +1,106 @@
-# Uptime Monitor
+# 🌐 Uptime Monitor
+
+<div align="center">
+
+**Lightweight website monitoring and bookmark hub on Cloudflare Workers + Pages + D1**
+
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-orange.svg)](https://workers.cloudflare.com/)
+[![Cloudflare D1](https://img.shields.io/badge/Cloudflare-D1-0051C3.svg)](https://developers.cloudflare.com/d1/)
+[![Vue 3](https://img.shields.io/badge/Vue-3-42b883.svg)](https://vuejs.org/)
+[![GitHub stars](https://img.shields.io/github/stars/jia0327/Uptime-Monitor?style=flat&logo=github)](https://github.com/jia0327/Uptime-Monitor)
 
 English | [中文](README.md)
 
-Uptime Monitor is a lightweight website monitoring system built on Cloudflare Workers, Pages, and D1. It supports multi-site uptime checks, SSL certificate and domain expiration checks, multiple notification channels, a public status page, and an admin dashboard. It also works as a **monitoring + bookmark** hub for public sites and internal links.
+</div>
 
-This repository extends [nianshu2022/Uptime-Monitor](https://github.com/nianshu2022/Uptime-Monitor) with **bookmark mode, split check/visit URLs, private monitors**, and improved link interactions on the status page and admin dashboard.
+---
 
-The project can run within Cloudflare's free tier and does not require a self-hosted server. The frontend uses bundled fonts and icons instead of runtime Google Fonts or icon CDN dependencies, making it friendlier for users in mainland China.
+## 💡 Core Idea
 
-## Differences from upstream
+**Monitoring and bookmarks in one place — uptime checks, SSL/domain alerts, and internal link navigation.**
 
-| Capability | Upstream | This repo |
-|---|---|---|
-| Core focus | Public uptime monitoring | **Monitoring + bookmark hub** |
-| Check URL vs visit link | Same URL, shown on public page | **Split**: check URL for probes only; visit link on public page |
-| Bookmark / internal links | Not supported | **No checks** interval for link-only entries |
-| Private monitors | Not supported | Public page **hides visit link**, shows name + status only |
-| Status page links | Name + separate URL row | **Underlined name** as link; full URL on hover |
-| Bookmarks | Mixed with monitors on same page | **Dedicated page** (`/bookmarks`) with tag categories |
-| Admin list links | Shows check URL | **Hides check URL**; underlined name jumps to visit link |
-| Tag input | Manual typing | Pick from existing tags or type new ones |
-| Admin entry | Footer only | Also in status page **header** |
-| Bookmark alert UI | — | Irrelevant alert settings hidden in bookmark mode |
+- **Split check / visit URLs**: probe URL for health checks only; public page shows the visit link
+- **Bookmark mode**: set interval to “no checks” for NAS, side routers, and other URLs Workers cannot reach
+- **Private monitors**: public status page hides visit links, showing name and status only
+- **Zero servers**: runs on Cloudflare free tier; bundled fonts and icons for better mainland China access
 
-> When upgrading from upstream, run the incremental SQL in [Create the D1 database](#create-the-d1-database).
+---
 
-## Who It Is For
+## 🚀 Online Demo
 
-- Personal site owners who want to monitor blogs, docs, APIs, image hosts, proxies, or small services.
-- Indie developers who need a public status page and alerting dashboard for their own products.
-- Small teams that need low-cost monitoring for websites, certificates, domains, and key HTTP endpoints.
-- Homelab / hybrid users who want bookmark-only entries for NAS, side routers, or other URLs that cannot be probed from the public internet.
-- Cloudflare users who prefer Workers, Pages, and D1 over maintaining a server.
+👉 **[https://uptime-monitor.onlydev.ccwu.cc](https://uptime-monitor.onlydev.ccwu.cc)**
 
-It is not meant to replace large observability platforms with distributed probes, advanced SLO reporting, on-call scheduling, or multi-tenant permission systems.
+| Path | Description |
+|------|-------------|
+| [`/`](https://uptime-monitor.onlydev.ccwu.cc/) | Public status page — monitor status, incidents, maintenance |
+| [`/bookmarks`](https://uptime-monitor.onlydev.ccwu.cc/bookmarks) | Bookmarks — internal / navigation links by tag |
+| [`/admin`](https://uptime-monitor.onlydev.ccwu.cc/admin) | Admin dashboard — login code **`Qwer1234`** |
 
-## Features
+> Demo is for evaluation only. Do not reuse the demo password in production. See [Deployment](#-deployment) to run your own instance.
+
+---
+
+## ✨ Features
 
 ### Monitoring and alerts
 
-- HTTP/HTTPS monitoring for multiple sites, with GET/POST, custom headers, request bodies, and keyword checks.
-- Check intervals: 1 / 3 / 5 / 10 / 15 / 30 minutes, or **no checks** (bookmark mode).
-- SSL certificate and domain expiration monitoring with independent toggles and alert thresholds.
-- Notifications through WeCom, Feishu, DingTalk, custom Webhook, Telegram, and Email.
-- Configurable alert templates with separate incident and recovery messages; silence windows for uptime, SSL, and domain alerts.
+| Capability | Description |
+|------------|-------------|
+| **HTTP/HTTPS probes** | GET/POST, custom headers, request body, keyword checks |
+| **Flexible intervals** | 1 / 3 / 5 / 10 / 15 / 30 minutes, or **no checks** (bookmark mode) |
+| **SSL / domain expiry** | Independent toggles and alert thresholds |
+| **Multi-channel alerts** | WeCom, Feishu, DingTalk, Webhook, Telegram, Email |
+| **Alert templates** | Separate incident and recovery messages; silence windows for uptime, SSL, and domain |
 
 ### Status page and bookmarks
 
-- Public status page with tag grouping, incidents, maintenance windows, and custom logo support; **dedicated bookmarks page** (`/bookmarks`) with tag-based categories.
-- **Bookmark mode (no checks)**: when interval is set to “no checks”, the entry is shown as a link only and no HTTP probe runs. Useful for internal NAS, side routers, or other unreachable URLs.
-- **Visit link**: shown as an **underlined monitor name** on the status page and admin list; hover to see the full URL. The **check URL is used for probes only and is not shown in lists**.
-- **Private monitors**: the public page hides the visit link and shows only name and status.
-- Admin entry is available in the status page header, not only in the footer.
+| Capability | Description |
+|------------|-------------|
+| **Public status page** | Tag grouping, incidents, maintenance windows, custom logo |
+| **Dedicated bookmarks page** | `/bookmarks` with tag-based categories, separate from monitors |
+| **Visit link UX** | Underlined name as link; full URL on hover; check URL hidden from lists |
+| **Private monitors** | Public page hides visit link, shows name and status only |
+| **Quick admin entry** | Status page header links to `/admin` |
 
 ### Admin dashboard
 
-- Monitor list uses **underlined names** as visit links; check URLs are hidden, with full URL on hover.
-- Tags can be picked from existing labels or typed as new comma-separated values.
-- Admin dashboard with bulk actions, drag-and-drop sorting, JSON import/export, and health checks.
-- Session-based admin authentication so the frontend does not keep a plaintext password.
-- `ALLOWED_ORIGIN` support for Worker and Pages proxy CORS hardening.
-- GitHub Actions deployment for both Worker and Pages.
+| Capability | Description |
+|------------|-------------|
+| **List UX** | Underlined names as visit links; check URLs hidden; full URL on hover |
+| **Tag input** | Pick from existing tags or type new comma-separated values |
+| **Bulk and ordering** | Bulk actions, drag-and-drop sort, JSON import/export, health checks |
+| **Session auth** | Login session token; frontend does not keep plaintext password |
+| **CORS hardening** | `ALLOWED_ORIGIN` support for Worker and Pages proxy |
+| **Auto deploy** | GitHub Actions on push to `main` updates Worker and Pages |
 
-### Mode comparison
+### Five monitor modes
 
 | Mode | Public page | HTTP checks | Typical use |
-|---|---|---|---|
-| Normal monitor | Name (underlined link) + status | Yes | Public websites, APIs |
-| Split check / visit URL | Name (underlined link) + status (check URL hidden) | Yes | Health endpoint vs login page |
-| Bookmark (no checks) | Name (underlined link) | No | Internal NAS, side router |
-| Private monitor | Name + status, **visit link hidden** | Yes | Sensitive admin panels |
-| Bookmark + private | Name only, **link hidden** | No | Sensitive internal links |
+|------|-------------|-------------|-------------|
+| **Normal monitor** | Name (underlined link) + status | Yes | Public websites, APIs |
+| **Split check / visit URL** | Name (underlined link) + status | Yes | Health endpoint vs login page |
+| **Bookmark (no checks)** | Name (underlined link) | No | Internal NAS, side router |
+| **Private monitor** | Name + status, **link hidden** | Yes | Sensitive admin panels |
+| **Bookmark + private** | Name only, **link hidden** | No | Sensitive internal links |
 
-## Quick Facts
+---
 
-| Question | Answer |
-|---|---|
-| Does it need a server | No, it runs on Cloudflare Workers, Pages, and D1 |
-| Does it need a database | Yes, Cloudflare D1 |
-| Public status page | Yes |
-| Admin dashboard | Yes, at `/admin`; also linked from the status page header |
-| Bookmark / internal links | Yes, set interval to “no checks” |
-| Private monitors | Yes; public page hides visit link |
-| Notification channels | WeCom, Feishu, DingTalk, Webhook, Telegram, Email |
-| Mainland China friendliness | Frontend assets are bundled locally; WeCom, Feishu, and DingTalk are recommended first |
-| Online demo | [https://uptime.nianshu2022.cn](https://uptime.nianshu2022.cn) |
+## 🎯 Who It Is For
 
-## Online Demo
+| User | Use case |
+|------|----------|
+| Personal site owners | Monitor blogs, docs, APIs, image hosts, proxies |
+| Indie developers | Public status page and alerting for their products |
+| Small teams | Low-cost monitoring for sites, certificates, domains, HTTP endpoints |
+| Homelab / hybrid users | Bookmark-only entries for NAS, side routers, unreachable URLs |
+| Cloudflare users | Run on Workers, Pages, and D1 without maintaining a server |
 
-- Status page: [https://uptime.nianshu2022.cn](https://uptime.nianshu2022.cn)
-- Admin dashboard: [https://uptime.nianshu2022.cn/admin](https://uptime.nianshu2022.cn/admin)
-- Demo password: `Qwer1234`
+Not meant for large observability platforms with distributed probes, advanced SLO reporting, on-call scheduling, or multi-tenant permissions.
 
-The demo password is only for the public demo. Do not use it as your production admin secret.
+---
 
-## Screenshots
+## 🖼️ Screenshots
 
 <div align="center">
   <img src="img/Uptime-Monitor-pc.png" alt="Status page" width="100%">
@@ -110,17 +116,49 @@ The demo password is only for the public demo. Do not use it as your production 
   <em>Admin dashboard</em>
 </div>
 
-## Tech Stack
+---
 
-| Area | Technology |
-|---|---|
+## 🏗️ Architecture
+
+```
+┌─────────────┐     ┌──────────────────┐     ┌─────────────────────┐
+│  Frontend   │────▶│  Pages Proxy     │────▶│  Hono Worker        │
+│  Vue 3 SPA  │     │  /api/* forward  │     │  + D1 + Cron probes │
+└─────────────┘     └──────────────────┘     └─────────────────────┘
+                                                      │
+                                                      ▼
+                                               ┌──────────────┐
+                                               │  Target sites│
+                                               │  SSL / domain│
+                                               │  Notifiers   │
+                                               └──────────────┘
+```
+
+| Layer | Technology |
+|-------|------------|
 | Backend | Cloudflare Workers + Hono |
 | Database | Cloudflare D1 |
 | Frontend | Vue 3 + Vite + Tailwind CSS |
 | Edge proxy | Cloudflare Pages Functions |
-| Deployment | Wrangler + GitHub Actions |
+| CI/CD | Wrangler + GitHub Actions |
 
-## Requirements
+---
+
+## 📋 Quick Facts
+
+| Question | Answer |
+|----------|--------|
+| Does it need a server | No — Cloudflare Workers, Pages, and D1 |
+| Bookmark / internal links | Yes — set interval to “no checks” |
+| Private monitors | Yes — public page hides visit link |
+| Notification channels | WeCom, Feishu, DingTalk, Webhook, Telegram, Email |
+| Mainland China friendliness | Bundled frontend assets; WeCom, Feishu, DingTalk recommended first |
+
+---
+
+## 🛠️ Deployment
+
+### Requirements
 
 - Cloudflare account
 - Node.js 22 or later
@@ -135,11 +173,11 @@ wrangler login
 Clone the repository:
 
 ```bash
-git clone https://github.com/cf-worker-page/Uptime-Monitor.git
+git clone https://github.com/jia0327/Uptime-Monitor.git
 cd Uptime-Monitor
 ```
 
-## Create a D1 Database
+### Create a D1 database
 
 Create a database:
 
@@ -184,7 +222,7 @@ npx wrangler d1 execute uptime-db --remote --command="ALTER TABLE monitors ADD C
 
 Bookmark mode uses `interval = 0` and needs no extra column. If the column already exists, SQLite will error and you can ignore it.
 
-## Pre-deployment Checklist
+### Pre-deployment checklist
 
 Before going live, make sure all 4 items are complete:
 
@@ -205,9 +243,9 @@ If the D1 schema is missing, public APIs or authenticated admin APIs may return:
 {"error":"D1_ERROR: no such table: monitors: SQLITE_ERROR"}
 ```
 
-## Manual Deployment
+### Manual deployment
 
-### 1. Configure and deploy the Worker
+#### 1. Configure and deploy the Worker
 
 ```bash
 cd worker
@@ -243,7 +281,7 @@ Copy the Worker URL from the command output, for example:
 https://uptime-worker.example.workers.dev
 ```
 
-### 2. Build and deploy the frontend
+#### 2. Build and deploy the frontend
 
 ```bash
 cd ../frontend
@@ -253,7 +291,7 @@ npm run build
 npx wrangler pages deploy dist --project-name=uptime-monitor
 ```
 
-### 3. Configure Pages environment variables
+#### 3. Configure Pages environment variables
 
 Open Cloudflare Dashboard:
 
@@ -262,7 +300,7 @@ Open Cloudflare Dashboard:
 Add:
 
 | Variable | Description |
-|---|---|
+|----------|-------------|
 | `WORKER_URL` | Worker URL, for example `https://uptime-worker.example.workers.dev` |
 | `ALLOWED_ORIGIN` | Pages URL, for example `https://uptime-monitor.pages.dev` |
 
@@ -280,14 +318,14 @@ curl https://your-pages-domain.pages.dev/api/monitors/public
 
 It should return `[]` or a monitor list. If it returns `WORKER_URL environment variable is not set`, the Pages environment variable is missing or the frontend was not redeployed after saving it.
 
-## GitHub Actions Deployment
+### GitHub Actions deployment
 
-After forking this repository, configure the following values in GitHub repository `Settings` -> `Secrets and variables` -> `Actions`.
+After cloning this repository, configure the following values in GitHub repository `Settings` -> `Secrets and variables` -> `Actions`.
 
-### Secrets
+#### Secrets
 
 | Name | Required | Description |
-|---|---|---|
+|------|----------|-------------|
 | `CLOUDFLARE_API_TOKEN` | Yes | Cloudflare API Token |
 | `CLOUDFLARE_ACCOUNT_ID` | Yes | Cloudflare Account ID |
 | `D1_DATABASE_ID` | Yes | D1 Database ID |
@@ -297,16 +335,16 @@ After forking this repository, configure the following values in GitHub reposito
 The Cloudflare API Token should include at least:
 
 | Permission | Level |
-|---|---|
+|------------|-------|
 | Account / Workers Scripts | Edit |
 | Account / Cloudflare Pages | Edit |
 | Account / D1 | Edit |
 | Account / Account Settings | Read |
 
-### Variables
+#### Variables
 
 | Name | Required | Description |
-|---|---|---|
+|------|----------|-------------|
 | `ALLOWED_ORIGIN` | Recommended | Pages URL for CORS hardening |
 | `SESSION_TTL_HOURS` | No | Admin session lifetime, defaults to 12 hours |
 | `VITE_FOOTER_AUTHOR` | No | Footer author name |
@@ -323,7 +361,7 @@ Open:
 Add:
 
 | Variable | Value |
-|---|---|
+|----------|-------|
 | `WORKER_URL` | Worker URL, for example `https://uptime-worker.example.workers.dev` |
 | `ALLOWED_ORIGIN` | Pages URL, for example `https://uptime-monitor.pages.dev` |
 
@@ -335,7 +373,9 @@ npm run build
 npx wrangler pages deploy dist --project-name=uptime-monitor
 ```
 
-## Local Development
+---
+
+## 💻 Local Development
 
 Start the Worker:
 
@@ -356,10 +396,13 @@ npm run dev
 Open:
 
 - Status page: `http://localhost:5173/`
+- Bookmarks: `http://localhost:5173/bookmarks`
 - Admin dashboard: `http://localhost:5173/admin`
 - Worker: `http://127.0.0.1:8787`
 
-## Mainland China Access Notes
+---
+
+## 🇨🇳 Mainland China Access Notes
 
 The `workers.dev` domain may not be directly reachable from mainland China. The recommended setup is to deploy the frontend to Cloudflare Pages and let the Pages proxy forward `/api/*` requests to the Worker.
 
@@ -370,7 +413,9 @@ For better stability, bind custom domains:
 
 The project does not depend on paid third-party services. Telegram, Email, `crt.sh`, and `rdap.org` may be affected by local network conditions. For mainland China users, WeCom, Feishu, DingTalk, or a custom Webhook are recommended first.
 
-## FAQ
+---
+
+## ❓ FAQ
 
 ### GitHub Actions reports Cloudflare Authentication error
 
@@ -423,7 +468,9 @@ Then initialize the remote database:
 npx wrangler d1 execute uptime-db --remote --file=worker/schema.sql
 ```
 
-## Project Structure
+---
+
+## 📁 Project Structure
 
 ```text
 Uptime-Monitor/
@@ -448,6 +495,25 @@ Uptime-Monitor/
 └── LICENSE
 ```
 
-## License
+---
+
+## 📄 License
 
 This project is licensed under the [MIT License](LICENSE).
+
+---
+
+## 🙏 Acknowledgments
+
+- [Cloudflare](https://www.cloudflare.com/) platform
+- Sister project: [CF-Quota-Dashboard](https://github.com/jia0327/CF-Quota-Dashboard) — multi-account Cloudflare free-tier monitoring
+
+---
+
+<div align="center">
+
+**[⬆ Back to top](#-uptime-monitor)**
+
+Made with ❤️ by [jia0327](https://github.com/jia0327)
+
+</div>

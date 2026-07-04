@@ -1,100 +1,106 @@
-# Uptime Monitor
+# 🌐 Uptime Monitor
+
+<div align="center">
+
+**基于 Cloudflare Workers + Pages + D1 的轻量级网站监控与书签导航**
+
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-orange.svg)](https://workers.cloudflare.com/)
+[![Cloudflare D1](https://img.shields.io/badge/Cloudflare-D1-0051C3.svg)](https://developers.cloudflare.com/d1/)
+[![Vue 3](https://img.shields.io/badge/Vue-3-42b883.svg)](https://vuejs.org/)
+[![GitHub stars](https://img.shields.io/github/stars/jia0327/Uptime-Monitor?style=flat&logo=github)](https://github.com/jia0327/Uptime-Monitor)
 
 [English](README.en.md) | 中文
 
-Uptime Monitor 是一个基于 Cloudflare Workers、Pages 和 D1 的轻量级网站监控系统。它支持多站点可用性监控、SSL 证书和域名到期检测、多渠道告警、公开状态页以及管理后台，同时也可作为**服务监控 + 书签**使用，适合个人站点、内网服务导航、小团队和轻量级服务监控。
+</div>
 
-本项目在 [nianshu2022/Uptime-Monitor](https://github.com/nianshu2022/Uptime-Monitor) 基础上增强，重点补齐**内网书签、检测/跳转分离、私密监控**等场景，并优化状态页与管理后台的链接交互。
+---
 
-项目依赖 Cloudflare 免费额度即可运行，不需要自建服务器。前端已移除 Google Fonts、运行时图标 CDN 等海外依赖，默认使用本地打包字体和图标，更适合国内用户访问。
+## 💡 核心理念
 
-## 与原版的差异
+**监控与书签二合一 — 一套系统搞定公网可用性、证书域名告警，以及内网链接导航。**
 
-| 能力 | 原版 | 本仓库 |
-|---|---|---|
-| 核心定位 | 公网站点可用性监控 | **监控 + 书签导航**二合一 |
-| 检测 URL 与跳转链接 | 同一 URL，公开页直接展示 | **可分离**：检测 URL 仅后台探测，公开页只展示跳转链接 |
-| 书签 / 内网链接 | 不支持 | 监测频率选「**不检测**」，仅作链接收藏 |
-| 私密监控 | 不支持 | 公开页**隐藏跳转链接**，只显示名称与状态 |
-| 状态页链接交互 | 名称 + 独立 URL 行 | **名称带下划线可点击**，悬停显示完整 URL |
-| 书签展示 | 与监控混在同一页 | **独立书签页**（`/bookmarks`），按标签分类筛选 |
-| 管理后台链接展示 | 列表展示检测 URL | **隐藏检测 URL**，名称带下划线跳转 |
-| 标签输入 | 手动输入 | 可从已有标签快速选择 |
-| 管理入口 | 页脚 | 状态页**顶部**也可进入 |
-| 书签告警配置 | — | 书签模式自动隐藏无关告警项 |
+- **检测 / 跳转分离**：探测 URL 仅用于后台健康检查，公开页只展示跳转链接
+- **书签模式**：监测频率选「不检测」，收藏 NAS、旁路由等 Worker 无法访问的内网服务
+- **私密监控**：公开状态页隐藏跳转链接，只显示名称与在线状态
+- **零服务器**：Cloudflare 免费额度即可运行；前端字体与图标本地打包，更适合国内访问
 
-> 从原版升级时，请执行下方 [数据库迁移](#创建-d1-数据库) 中的增量 SQL。
+---
 
-## 适合谁
+## 🚀 在线 Demo
 
-- 个人站长：监控博客、文档站、API、图床、反代服务等。
-- 独立开发者：给自己的产品准备一个公开状态页和告警后台。
-- 小团队：用低成本方式监控网站、证书、域名和关键 HTTP 服务。
-- 内网/混合环境用户：用「不检测」模式收藏 NAS、旁路由等无法外网探测的链接。
-- Cloudflare 用户：希望直接跑在 Workers、Pages 和 D1 上，不额外维护服务器。
+👉 **[https://uptime-monitor.onlydev.ccwu.cc](https://uptime-monitor.onlydev.ccwu.cc)**
 
-不适合需要复杂探针网络、企业级 SLO 报表、值班排班和多租户权限的大型团队。
+| 路径 | 说明 |
+|------|------|
+| [`/`](https://uptime-monitor.onlydev.ccwu.cc/) | 公开状态页 — 监控状态、事件公告与维护窗口 |
+| [`/bookmarks`](https://uptime-monitor.onlydev.ccwu.cc/bookmarks) | 书签页 — 按标签分类的内网 / 导航链接 |
+| [`/admin`](https://uptime-monitor.onlydev.ccwu.cc/admin) | 管理后台 — 登录码 **`Qwer1234`** |
 
-## 功能特性
+> Demo 仅供体验，请勿将演示密码用于生产环境。部署自己的实例见下方 [部署](#-部署)。
+
+---
+
+## ✨ 功能特性
 
 ### 监控与告警
 
-- 多站点 HTTP/HTTPS 监控，支持 GET/POST、自定义 Header、请求 Body 和关键词校验。
-- 监测频率可选 1 / 3 / 5 / 10 / 15 / 30 分钟，或 **不检测**（见下方书签模式）。
-- SSL 证书与域名到期检测，支持独立开关和提前提醒阈值。
-- 支持企业微信、飞书、钉钉、自定义 Webhook、Telegram 和 Email 告警。
-- 告警模板可配置，恢复通知和异常通知分离；支持可用性、SSL、域名三类告警静默窗口。
+| 能力 | 说明 |
+|------|------|
+| **HTTP/HTTPS 探测** | GET/POST、自定义 Header、请求 Body、关键词校验 |
+| **灵活频率** | 1 / 3 / 5 / 10 / 15 / 30 分钟，或 **不检测**（书签模式） |
+| **SSL / 域名到期** | 独立开关与提前提醒阈值 |
+| **多通道通知** | 企业微信、飞书、钉钉、Webhook、Telegram、Email |
+| **告警模板** | 异常与恢复分离；可用性 / SSL / 域名三类静默窗口 |
 
 ### 状态页与书签
 
-- 公开状态页支持标签分组、事件公告、计划维护和自定义 Logo；**书签独立页面**（`/bookmarks`）按标签分类展示。
-- **书签模式（不检测）**：监测频率选「不检测」后，条目仅作为链接展示，不发起 HTTP 探测，适合内网 NAS、旁路由等 Worker 无法访问的服务。
-- **跳转链接**：状态页与管理后台均以**名称带下划线**的形式提供跳转，悬停可查看完整 URL；**检测 URL 仅用于后台探测，不在列表中展示**。
-- **私密监控**：勾选后公开页隐藏跳转链接，仅展示名称与在线状态。
-- 状态页顶部提供「管理后台」入口，无需滚到页脚。
+| 能力 | 说明 |
+|------|------|
+| **公开状态页** | 标签分组、事件公告、计划维护、自定义 Logo |
+| **独立书签页** | `/bookmarks` 按标签分类展示，与监控条目分离 |
+| **跳转链接交互** | 名称带下划线可点击，悬停显示完整 URL；检测 URL 不在列表展示 |
+| **私密监控** | 公开页隐藏跳转链接，仅展示名称与状态 |
+| **快捷管理入口** | 状态页顶部直达 `/admin`，无需滚到页脚 |
 
 ### 管理后台
 
-- 监控列表以**名称带下划线**形式跳转，不展示检测 URL，悬停可查看完整链接。
-- 标签支持从已有标签快速选择，也可输入新标签（逗号分隔多个）。
-- 管理后台支持批量操作、拖拽排序、配置导入导出和健康检查。
-- 管理接口使用登录会话令牌，避免前端长期保存明文口令。
-- Worker 和 Pages 代理支持 `ALLOWED_ORIGIN`，可收紧跨域来源。
-- GitHub Actions 自动部署 Worker 和 Pages。
+| 能力 | 说明 |
+|------|------|
+| **列表交互** | 名称带下划线跳转，检测 URL 隐藏，悬停查看完整链接 |
+| **标签输入** | 从已有标签快速选择，或输入新标签（逗号分隔） |
+| **批量与排序** | 批量操作、拖拽排序、配置导入导出、健康检查 |
+| **会话认证** | 登录会话令牌，前端不长期保存明文口令 |
+| **跨域收紧** | Worker 与 Pages 代理支持 `ALLOWED_ORIGIN` |
+| **自动部署** | GitHub Actions 推送 `main` 自动更新 Worker 与 Pages |
 
-### 监控模式对比
+### 五种监控模式
 
 | 模式 | 公开页 | HTTP 检测 | 典型用途 |
-|---|---|---|---|
-| 普通监控 | 名称（下划线跳转）+ 状态 | 是 | 公网网站、API |
-| 检测/跳转分离 | 名称（下划线跳转）+ 状态（检测 URL 不公开） | 是 | 健康检查与登录页不同 |
-| 书签（不检测） | 名称（下划线跳转） | 否 | 内网 NAS、旁路由 |
-| 私密监控 | 名称 + 状态，**隐藏跳转链接** | 是 | 敏感管理面板 |
-| 书签 + 私密 | 名称，**隐藏链接** | 否 | 内网敏感服务链接 |
+|------|--------|-----------|----------|
+| **普通监控** | 名称（下划线跳转）+ 状态 | 是 | 公网网站、API |
+| **检测/跳转分离** | 名称（下划线跳转）+ 状态 | 是 | 健康检查端点与登录页不同 |
+| **书签（不检测）** | 名称（下划线跳转） | 否 | 内网 NAS、旁路由 |
+| **私密监控** | 名称 + 状态，**隐藏链接** | 是 | 敏感管理面板 |
+| **书签 + 私密** | 名称，**隐藏链接** | 否 | 内网敏感服务链接 |
 
-## 快速了解
+---
 
-| 问题 | 回答 |
-|---|---|
-| 是否需要服务器 | 不需要，部署到 Cloudflare Workers、Pages 和 D1 |
-| 是否需要数据库 | 需要 Cloudflare D1 |
-| 是否支持公开状态页 | 支持 |
-| 是否支持后台管理 | 支持，路径为 `/admin`，状态页顶部也可进入 |
-| 是否支持书签/内网链接 | 支持，监测频率选「不检测」 |
-| 是否支持私密监控 | 支持，公开页隐藏跳转链接 |
-| 是否支持告警 | 支持企业微信、飞书、钉钉、Webhook、Telegram、Email |
-| 是否适合国内用户 | 前端资源本地打包，通知渠道优先推荐企业微信、飞书、钉钉 |
-| 在线 Demo | [https://uptime.nianshu2022.cn](https://uptime.nianshu2022.cn) |
+## 🎯 适合谁
 
-## 在线演示
+| 用户 | 场景 |
+|------|------|
+| 个人站长 | 监控博客、文档站、API、图床、反代服务 |
+| 独立开发者 | 为产品准备公开状态页与告警后台 |
+| 小团队 | 低成本监控网站、证书、域名与关键 HTTP 服务 |
+| 内网 / 混合环境 | 「不检测」模式收藏 NAS、旁路由等无法外网探测的链接 |
+| Cloudflare 用户 | 直接跑在 Workers、Pages 和 D1 上，无需维护服务器 |
 
-- 状态页：[https://uptime.nianshu2022.cn](https://uptime.nianshu2022.cn)
-- 管理后台：[https://uptime.nianshu2022.cn/admin](https://uptime.nianshu2022.cn/admin)
-- 演示密码：`Qwer1234`
+不适合需要复杂探针网络、企业级 SLO 报表、值班排班和多租户权限的大型团队。
 
-演示密码仅用于公开 Demo，请不要作为自己的生产环境管理口令。
+---
 
-## 界面预览
+## 🖼️ 界面预览
 
 <div align="center">
   <img src="img/Uptime-Monitor-pc.png" alt="Status page" width="100%">
@@ -110,17 +116,49 @@ Uptime Monitor 是一个基于 Cloudflare Workers、Pages 和 D1 的轻量级网
   <em>管理后台</em>
 </div>
 
-## 技术栈
+---
 
-| 模块 | 技术 |
-|---|---|
+## 🏗️ 技术架构
+
+```
+┌─────────────┐     ┌──────────────────┐     ┌─────────────────────┐
+│  Frontend   │────▶│  Pages Proxy     │────▶│  Hono Worker        │
+│  Vue 3 SPA  │     │  /api/* 转发     │     │  + D1 + Cron 探测   │
+└─────────────┘     └──────────────────┘     └─────────────────────┘
+                                                      │
+                                                      ▼
+                                               ┌──────────────┐
+                                               │  目标站点    │
+                                               │  SSL / 域名  │
+                                               │  通知渠道    │
+                                               └──────────────┘
+```
+
+| 层级 | 技术 |
+|------|------|
 | 后端 | Cloudflare Workers + Hono |
 | 数据库 | Cloudflare D1 |
 | 前端 | Vue 3 + Vite + Tailwind CSS |
 | 边缘代理 | Cloudflare Pages Functions |
-| 部署 | Wrangler + GitHub Actions |
+| CI/CD | Wrangler + GitHub Actions |
 
-## 前置要求
+---
+
+## 📋 快速了解
+
+| 问题 | 回答 |
+|------|------|
+| 是否需要服务器 | 不需要，部署到 Cloudflare Workers、Pages 和 D1 |
+| 是否支持书签 / 内网链接 | 支持，监测频率选「不检测」 |
+| 是否支持私密监控 | 支持，公开页隐藏跳转链接 |
+| 是否支持告警 | 企业微信、飞书、钉钉、Webhook、Telegram、Email |
+| 是否适合国内用户 | 前端资源本地打包；通知优先推荐企业微信、飞书、钉钉 |
+
+---
+
+## 🛠️ 部署
+
+### 前置要求
 
 - Cloudflare 账号
 - Node.js 22 或更高版本
@@ -135,11 +173,11 @@ wrangler login
 克隆项目：
 
 ```bash
-git clone https://github.com/cf-worker-page/Uptime-Monitor.git
+git clone https://github.com/jia0327/Uptime-Monitor.git
 cd Uptime-Monitor
 ```
 
-## 创建 D1 数据库
+### 创建 D1 数据库
 
 新建数据库：
 
@@ -170,13 +208,13 @@ npx wrangler d1 list
 
 已有数据库升级时，请使用 `worker/schema.sql` 文件末尾注释中的 **增量迁移** 语句，不要直接执行完整建表脚本（会清空数据）。
 
-若从旧版本升级至支持「私密监控」的版本，需执行：
+若升级至支持「私密监控」的版本，需执行：
 
 ```bash
 npx wrangler d1 execute uptime-db --remote --command="ALTER TABLE monitors ADD COLUMN is_private INTEGER DEFAULT 0;"
 ```
 
-若从旧版本升级至支持「检测/跳转链接分离」的版本，需执行：
+若升级至支持「检测/跳转链接分离」的版本，需执行：
 
 ```bash
 npx wrangler d1 execute uptime-db --remote --command="ALTER TABLE monitors ADD COLUMN link_url TEXT;"
@@ -184,7 +222,7 @@ npx wrangler d1 execute uptime-db --remote --command="ALTER TABLE monitors ADD C
 
 「不检测 / 书签」模式使用 `interval = 0`，无需额外数据库字段。若列已存在，SQLite 会报错，可忽略。
 
-## 部署前检查清单
+### 部署前检查清单
 
 上线前请确认下面 4 项都已完成：
 
@@ -205,9 +243,9 @@ npx wrangler d1 execute uptime-db --remote --command="ALTER TABLE monitors ADD C
 {"error":"D1_ERROR: no such table: monitors: SQLITE_ERROR"}
 ```
 
-## 手动部署
+### 手动部署
 
-### 1. 配置并部署 Worker
+#### 1. 配置并部署 Worker
 
 ```bash
 cd worker
@@ -243,7 +281,7 @@ npx wrangler deploy
 https://uptime-worker.example.workers.dev
 ```
 
-### 2. 构建并部署前端
+#### 2. 构建并部署前端
 
 ```bash
 cd ../frontend
@@ -253,7 +291,7 @@ npm run build
 npx wrangler pages deploy dist --project-name=uptime-monitor
 ```
 
-### 3. 配置 Pages 环境变量
+#### 3. 配置 Pages 环境变量
 
 进入 Cloudflare Dashboard：
 
@@ -262,7 +300,7 @@ npx wrangler pages deploy dist --project-name=uptime-monitor
 添加：
 
 | 变量 | 说明 |
-|---|---|
+|------|------|
 | `WORKER_URL` | Worker 地址，例如 `https://uptime-worker.example.workers.dev` |
 | `ALLOWED_ORIGIN` | Pages 地址，例如 `https://uptime-monitor.pages.dev` |
 
@@ -280,14 +318,14 @@ curl https://你的-pages域名.pages.dev/api/monitors/public
 
 正常情况下会返回 `[]` 或监控列表。如果返回 `WORKER_URL environment variable is not set`，说明 Pages 环境变量未配置或配置后没有重新部署。
 
-## GitHub Actions 自动部署
+### GitHub Actions 自动部署
 
-Fork 本仓库后，在 GitHub 仓库的 `Settings` -> `Secrets and variables` -> `Actions` 中配置以下内容。
+克隆本仓库后，在 GitHub 仓库的 `Settings` -> `Secrets and variables` -> `Actions` 中配置以下内容。
 
-### Secrets
+#### Secrets
 
 | 名称 | 必填 | 说明 |
-|---|---|---|
+|------|------|------|
 | `CLOUDFLARE_API_TOKEN` | 是 | Cloudflare API Token |
 | `CLOUDFLARE_ACCOUNT_ID` | 是 | Cloudflare Account ID |
 | `D1_DATABASE_ID` | 是 | D1 数据库 ID |
@@ -297,16 +335,16 @@ Fork 本仓库后，在 GitHub 仓库的 `Settings` -> `Secrets and variables` -
 Cloudflare API Token 至少需要这些权限：
 
 | 权限 | 级别 |
-|---|---|
+|------|------|
 | Account / Workers Scripts | Edit |
 | Account / Cloudflare Pages | Edit |
 | Account / D1 | Edit |
 | Account / Account Settings | Read |
 
-### Variables
+#### Variables
 
 | 名称 | 必填 | 说明 |
-|---|---|---|
+|------|------|------|
 | `ALLOWED_ORIGIN` | 推荐 | Pages 地址，用于限制跨域来源 |
 | `SESSION_TTL_HOURS` | 否 | 登录会话有效期，默认 12 小时 |
 | `VITE_FOOTER_AUTHOR` | 否 | 页脚作者名 |
@@ -323,7 +361,7 @@ Cloudflare API Token 至少需要这些权限：
 添加：
 
 | 变量 | 值 |
-|---|---|
+|------|-----|
 | `WORKER_URL` | Worker 地址，例如 `https://uptime-worker.example.workers.dev` |
 | `ALLOWED_ORIGIN` | Pages 地址，例如 `https://uptime-monitor.pages.dev` |
 
@@ -335,7 +373,9 @@ npm run build
 npx wrangler pages deploy dist --project-name=uptime-monitor
 ```
 
-## 本地开发
+---
+
+## 💻 本地开发
 
 启动 Worker：
 
@@ -356,10 +396,13 @@ npm run dev
 访问：
 
 - 状态页：`http://localhost:5173/`
+- 书签页：`http://localhost:5173/bookmarks`
 - 管理后台：`http://localhost:5173/admin`
 - Worker：`http://127.0.0.1:8787`
 
-## 国内访问说明
+---
+
+## 🇨🇳 国内访问说明
 
 `workers.dev` 域名在中国大陆可能无法直接访问。推荐将前端部署到 Cloudflare Pages，并通过 Pages 内置代理把 `/api/*` 请求转发到 Worker。
 
@@ -370,7 +413,9 @@ npm run dev
 
 项目不依赖需要付费的第三方服务。Telegram、Email、`crt.sh`、`rdap.org` 等外部服务可能受网络环境影响，国内用户建议优先使用企业微信、飞书、钉钉或自定义 Webhook。
 
-## 常见问题
+---
+
+## ❓ 常见问题
 
 ### GitHub Actions 提示 Cloudflare Authentication error
 
@@ -423,7 +468,9 @@ npx wrangler d1 list
 npx wrangler d1 execute uptime-db --remote --file=worker/schema.sql
 ```
 
-## 目录结构
+---
+
+## 📁 目录结构
 
 ```text
 Uptime-Monitor/
@@ -448,6 +495,25 @@ Uptime-Monitor/
 └── LICENSE
 ```
 
-## 许可证
+---
+
+## 📄 License
 
 本项目基于 [MIT License](LICENSE) 开源。
+
+---
+
+## 🙏 致谢
+
+- [Cloudflare](https://www.cloudflare.com/) 平台
+- 同系列项目：[CF-Quota-Dashboard](https://github.com/jia0327/CF-Quota-Dashboard) — Cloudflare 多账号免费额度监控
+
+---
+
+<div align="center">
+
+**[⬆ 回到顶部](#-uptime-monitor)**
+
+Made with ❤️ by [jia0327](https://github.com/jia0327)
+
+</div>

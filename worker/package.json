@@ -4,7 +4,7 @@
   "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/nianshu2022/Uptime-Monitor.git"
+    "url": "https://github.com/jia0327/Uptime-Monitor.git"
   },
   "scripts": {
     "deploy": "wrangler deploy",
