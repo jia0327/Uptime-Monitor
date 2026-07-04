@@ -35,9 +35,9 @@
 |------|------|
 | [`/`](https://uptime-monitor.onlydev.ccwu.cc/) | 公开状态页 — 监控状态、事件公告与维护窗口 |
 | [`/bookmarks`](https://uptime-monitor.onlydev.ccwu.cc/bookmarks) | 书签页 — 按标签分类的内网 / 导航链接 |
-| [`/admin`](https://uptime-monitor.onlydev.ccwu.cc/admin) | 管理后台 — 登录码 **`Qwer1234`** |
+| [`/admin`](https://uptime-monitor.onlydev.ccwu.cc/admin) | 管理后台 — **Demo 不提供登录密码**，需自行部署后使用 |
 
-> Demo 仅供体验，请勿将演示密码用于生产环境。部署自己的实例见下方 [部署](#-部署)。
+> Demo 仅开放状态页与书签页。部署自己的实例见下方 [部署](#-部署)。
 
 ---
 
@@ -86,6 +86,41 @@
 
 ---
 
+## 解决什么痛点
+
+| 痛点 | 本仓库怎么做 |
+| :--- | :--- |
+| 公网监控与内网导航要两套工具 | **监控 + 书签二合一**，同一套状态页与管理后台 |
+| 健康检查 URL 不想公开 | **检测 / 跳转分离**，探测 URL 仅后台使用 |
+| NAS / 旁路由 Worker 无法探测 | **「不检测」书签模式** + 独立 `/bookmarks` 页 |
+| 敏感管理面板链接不宜公开 | **私密监控**，公开页只显示名称与状态 |
+| 国内访问与通知体验 | 前端资源本地打包；**企微 / 飞书 / 钉钉**优先 |
+
+---
+
+## 🆚 对比差异
+
+| | **本仓库** | **[原版 nianshu2022](https://github.com/nianshu2022/Uptime-Monitor)** | **UptimeRobot 等 SaaS** |
+| :--- | :---: | :---: | :---: |
+| 定位 | 监控 + 书签导航 | 公网站点可用性监控 | 托管 SaaS 监控 |
+| 检测 / 跳转 URL 分离 | ✅ | ❌ 同一 URL | 🟡 有限 |
+| 书签模式（不检测） | ✅ `/bookmarks` | ❌ | ❌ |
+| 私密监控 | ✅ 公开页隐藏链接 | ❌ | 🟡 视方案而定 |
+| 状态页链接 | 名称下划线跳转 | 名称 + 独立 URL 行 | 固定模板 |
+| 管理后台 | 监控 / 书签分 Tab | 混合列表 | — |
+| 标签输入 | ✅ 快速选择已有 | 手动输入 | — |
+| 自托管 / 数据自控 | ✅ CF 免费额度 | ✅ CF 免费额度 | ❌ |
+| SSL / 域名到期 | ✅ | ✅ | 🟡 部分付费 |
+| 国内通知渠道 | ✅ 企微 / 飞书 / 钉钉 | ✅ | 🟡 |
+
+- **本仓库** — 监控 + 内网书签 + 检测跳转分离 + 私密监控
+- **[原版](https://github.com/nianshu2022/Uptime-Monitor)** — 轻量公网 uptime 监控，快速上手
+- **SaaS 监控** — 零部署，但数据、定制与内网场景受限
+
+> 从原版升级时，请执行下方 [部署](#-部署) 中的增量 SQL（`is_private`、`link_url` 等字段）。
+
+---
+
 ## 🎯 适合谁
 
 | 用户 | 场景 |
@@ -103,17 +138,25 @@
 ## 🖼️ 界面预览
 
 <div align="center">
-  <img src="img/Uptime-Monitor-pc.png" alt="Status page" width="100%">
+  <img src="img/status-page.png" alt="Status page" width="100%">
   <br>
-  <em>公开状态页</em>
+  <em>公开状态页 — 实时监控、90 天 uptime 条与私密服务分组</em>
 </div>
 
 <br>
 
 <div align="center">
-  <img src="img/Uptime-Monitor-admin.png" alt="Admin dashboard" width="100%">
+  <img src="img/monitor-settings.png" alt="Monitor settings" width="100%">
   <br>
-  <em>管理后台</em>
+  <em>监控配置 — 私密监控、监测频率与告警静默窗口</em>
+</div>
+
+<br>
+
+<div align="center">
+  <img src="img/admin-bookmarks.png" alt="Admin bookmarks" width="100%">
+  <br>
+  <em>管理后台 — 监控 / 书签分 Tab，内网链接与标签筛选</em>
 </div>
 
 ---
@@ -506,6 +549,7 @@ Uptime-Monitor/
 ## 🙏 致谢
 
 - [Cloudflare](https://www.cloudflare.com/) 平台
+- 基于 [nianshu2022/Uptime-Monitor](https://github.com/nianshu2022/Uptime-Monitor) 增强
 - 同系列项目：[CF-Quota-Dashboard](https://github.com/jia0327/CF-Quota-Dashboard) — Cloudflare 多账号免费额度监控
 
 ---

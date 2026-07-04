@@ -29,20 +29,17 @@
 
 | 截图 | 用途 |
 |---|---|
-| 公开状态页 | 让用户第一眼理解最终效果 |
-| 管理控制台 | 展示监控列表、状态和操作密度 |
-| 添加监控弹窗 | 展示配置能力和上手成本 |
-| 通知渠道管理 | 展示告警目标配置 |
-| 事件与维护 | 展示状态页公告和维护窗口能力 |
+| 公开状态页（`img/status-page.png`） | 实时监控、uptime 条、私密服务分组 |
+| 监控配置弹窗（`img/monitor-settings.png`） | 私密监控、频率与告警配置 |
+| 管理后台书签 Tab（`img/admin-bookmarks.png`） | 监控 / 书签分 Tab、内网链接管理 |
 
 ## Demo 建议
 
 - 当前 Demo 状态页：`https://uptime-monitor.onlydev.ccwu.cc`
-- 当前 Demo 后台：`https://uptime-monitor.onlydev.ccwu.cc/admin`
-- 当前 Demo 密码：`Qwer1234`
+- 当前 Demo 书签页：`https://uptime-monitor.onlydev.ccwu.cc/bookmarks`
+- **Demo 不提供管理后台登录密码**，后台能力以 README 截图展示即可。
 - 使用一个单独的 Cloudflare 项目部署 Demo，不要混用生产监控实例。
 - Demo 状态页可以配置 3 到 5 个公开站点。
-- Demo 密码只用于演示环境，不要复用到生产环境。
 
 ## 发布渠道
 

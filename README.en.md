@@ -35,9 +35,9 @@ English | [中文](README.md)
 |------|-------------|
 | [`/`](https://uptime-monitor.onlydev.ccwu.cc/) | Public status page — monitor status, incidents, maintenance |
 | [`/bookmarks`](https://uptime-monitor.onlydev.ccwu.cc/bookmarks) | Bookmarks — internal / navigation links by tag |
-| [`/admin`](https://uptime-monitor.onlydev.ccwu.cc/admin) | Admin dashboard — login code **`Qwer1234`** |
+| [`/admin`](https://uptime-monitor.onlydev.ccwu.cc/admin) | Admin dashboard — **no demo login**; deploy your own instance to access |
 
-> Demo is for evaluation only. Do not reuse the demo password in production. See [Deployment](#-deployment) to run your own instance.
+> Demo exposes the status page and bookmarks only. See [Deployment](#-deployment) to run your own instance.
 
 ---
 
@@ -86,6 +86,41 @@ English | [中文](README.md)
 
 ---
 
+## Pain Points
+
+| Pain point | How this repo helps |
+| :--- | :--- |
+| Separate tools for public monitoring vs internal links | **Monitoring + bookmarks in one** status page and admin |
+| Health-check URL should stay private | **Split check / visit URLs** — probe URL for backend only |
+| NAS / side routers unreachable from Workers | **No-check bookmark mode** + dedicated `/bookmarks` page |
+| Sensitive admin links should not appear publicly | **Private monitors** — public page shows name and status only |
+| Mainland China access and notifications | Bundled frontend assets; **WeCom / Feishu / DingTalk** first |
+
+---
+
+## 🆚 Comparison
+
+| | **This repo** | **[Upstream nianshu2022](https://github.com/nianshu2022/Uptime-Monitor)** | **UptimeRobot & SaaS** |
+| :--- | :---: | :---: | :---: |
+| Focus | Monitoring + bookmark hub | Public uptime monitoring | Hosted SaaS monitoring |
+| Split check / visit URL | ✅ | ❌ same URL | 🟡 limited |
+| Bookmark mode (no checks) | ✅ `/bookmarks` | ❌ | ❌ |
+| Private monitors | ✅ hides visit link | ❌ | 🟡 varies |
+| Status page links | Underlined name | Name + separate URL row | Fixed templates |
+| Admin dashboard | Monitor / bookmark tabs | Mixed list | — |
+| Tag input | ✅ pick existing tags | Manual typing | — |
+| Self-hosted / data control | ✅ CF free tier | ✅ CF free tier | ❌ |
+| SSL / domain expiry | ✅ | ✅ | 🟡 often paid |
+| Mainland notification channels | ✅ WeCom / Feishu / DingTalk | ✅ | 🟡 |
+
+- **This repo** — monitoring + internal bookmarks + split URLs + private monitors
+- **[Upstream](https://github.com/nianshu2022/Uptime-Monitor)** — lightweight public uptime monitoring, quick to start
+- **SaaS monitoring** — zero setup, but limited data control and homelab use cases
+
+> When upgrading from upstream, run the incremental SQL in [Deployment](#-deployment) (`is_private`, `link_url`, etc.).
+
+---
+
 ## 🎯 Who It Is For
 
 | User | Use case |
@@ -103,17 +138,25 @@ Not meant for large observability platforms with distributed probes, advanced SL
 ## 🖼️ Screenshots
 
 <div align="center">
-  <img src="img/Uptime-Monitor-pc.png" alt="Status page" width="100%">
+  <img src="img/status-page.png" alt="Status page" width="100%">
   <br>
-  <em>Public status page</em>
+  <em>Public status page — live monitors, 90-day uptime bars, private service grouping</em>
 </div>
 
 <br>
 
 <div align="center">
-  <img src="img/Uptime-Monitor-admin.png" alt="Admin dashboard" width="100%">
+  <img src="img/monitor-settings.png" alt="Monitor settings" width="100%">
   <br>
-  <em>Admin dashboard</em>
+  <em>Monitor settings — private mode, check intervals, alert silence windows</em>
+</div>
+
+<br>
+
+<div align="center">
+  <img src="img/admin-bookmarks.png" alt="Admin bookmarks" width="100%">
+  <br>
+  <em>Admin dashboard — monitor / bookmark tabs, internal links, tag filters</em>
 </div>
 
 ---
@@ -506,6 +549,7 @@ This project is licensed under the [MIT License](LICENSE).
 ## 🙏 Acknowledgments
 
 - [Cloudflare](https://www.cloudflare.com/) platform
+- Extends [nianshu2022/Uptime-Monitor](https://github.com/nianshu2022/Uptime-Monitor)
 - Sister project: [CF-Quota-Dashboard](https://github.com/jia0327/CF-Quota-Dashboard) — multi-account Cloudflare free-tier monitoring
 
 ---
