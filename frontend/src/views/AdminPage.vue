@@ -378,10 +378,12 @@ const openConfig = (m) => {
     showConfig.value = true;
 };
 
-const saveConfig = async () => {
-    if (!configTarget.value) return; configSaving.value = true;
+const saveConfig = async (payload) => {
+    if (!configTarget.value) return;
+    const data = payload || configForm.value;
+    configSaving.value = true;
     try {
-        const body = { name: configForm.value.name, url: configForm.value.url, link_url: configForm.value.link_url || '', method: configForm.value.method || 'GET', keyword: configForm.value.keyword, user_agent: configForm.value.user_agent, tags: configForm.value.tags || '', request_headers: configForm.value.request_headers || '', request_body: configForm.value.request_body || '', interval: Number(configForm.value.interval), check_ssl: configForm.value.check_ssl ? 1 : 0, check_domain: configForm.value.check_domain ? 1 : 0, is_private: configForm.value.is_private ? 1 : 0, alert_silence_uptime: Number(configForm.value.alert_silence_uptime), alert_silence_ssl: Number(configForm.value.alert_silence_ssl), alert_silence_domain: Number(configForm.value.alert_silence_domain), alert_error_rate: Number(configForm.value.alert_error_rate ?? 0) };
+        const body = { name: data.name, url: data.url, link_url: data.link_url || '', method: data.method || 'GET', keyword: data.keyword, user_agent: data.user_agent, tags: data.tags || '', request_headers: data.request_headers || '', request_body: data.request_body || '', interval: Number(data.interval), check_ssl: data.check_ssl ? 1 : 0, check_domain: data.check_domain ? 1 : 0, is_private: data.is_private ? 1 : 0, alert_silence_uptime: Number(data.alert_silence_uptime), alert_silence_ssl: Number(data.alert_silence_ssl), alert_silence_domain: Number(data.alert_silence_domain), alert_error_rate: Number(data.alert_error_rate ?? 0) };
         const res = await authFetch(`${API_BASE}/monitors/${configTarget.value.id}/config`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         if (res.ok) { addToast('配置已保存', 'success'); showConfig.value = false; fetchMonitors(); }
         else { const d = await res.json(); addToast(d.error || '保存失败', 'error'); }
