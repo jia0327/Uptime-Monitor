@@ -354,9 +354,32 @@ const deleteMonitor = async (m) => {
 
 // ── 手动检测 ──
 const forceCheck = async (m) => {
-    if (m._checking || m.interval === 0) return; m._checking = true;
-    try { const res = await authFetch(`${API_BASE}/monitors/${m.id}/check`, { method: 'POST' }); if (res.ok) { addToast(`已更新：${m.name}`, 'success'); fetchMonitors(); } } catch { addToast('网络错误', 'error'); }
-    finally { m._checking = false; }
+    if (m._checking || m.interval === 0) return;
+    m._checking = true;
+    try {
+        const res = await fetchT(`${API_BASE}/monitors/${m.id}/check`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${storedToken.value}` },
+        }, 45000);
+        if (res.status === 401) {
+            sessionStorage.removeItem('uptime_admin_token');
+            sessionStorage.removeItem('uptime_admin_password');
+            storedToken.value = '';
+            addToast('登录已过期，请重新登录', 'error');
+            return;
+        }
+        if (res.ok) {
+            addToast(`已更新：${m.name}`, 'success');
+            await fetchMonitors();
+        } else {
+            const d = await res.json().catch(() => ({}));
+            addToast(d.error || '检查失败', 'error');
+        }
+    } catch {
+        addToast('检查超时或网络错误', 'error');
+    } finally {
+        m._checking = false;
+    }
 };
 
 // ── 暂停/恢复 ──

@@ -501,13 +501,18 @@ app.post('/monitors/:id/check', async (c) => {
     if (!results[0]) return c.json({ error: 'Monitor not found' }, 404);
     if (results[0].interval === 0) return c.json({ error: 'Bookmark entries are not checked' }, 400);
 
-    // 强制执行证书及域名信息获取
-    await updateDomainCertInfo(c.env, results[0]);
-    // 更新最后一次信息获取时间，防止随后重复触发
-    await c.env.DB.prepare('UPDATE monitors SET check_info_status = ? WHERE id = ?')
-      .bind(new Date().toISOString(), id).run();
-
     await performCheck(results[0], c.env);
+
+    // 证书/域名信息后台刷新，避免阻塞手动检测（crt.sh 可能很慢）
+    c.executionCtx.waitUntil(
+      (async () => {
+        try {
+          await c.env.DB.prepare('UPDATE monitors SET check_info_status = ? WHERE id = ?')
+            .bind(new Date().toISOString(), id).run();
+          await updateDomainCertInfo(c.env, results[0]);
+        } catch (err) { console.error('Manual check cert refresh failed:', err); }
+      })()
+    );
 
     return c.json({ success: true });
   } catch (e: unknown) {
