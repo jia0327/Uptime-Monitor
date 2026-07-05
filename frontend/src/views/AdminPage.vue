@@ -137,7 +137,7 @@
     <AddMonitorModal v-if="showAddModal" :newMonitor="newMonitor" :submitting="submitting" :allTags="allTags"
       @close="showAddModal = false" @submit="addMonitor" />
 
-    <ConfigModal v-if="showConfig" :configTarget="configTarget" :configForm="configForm" :configSaving="configSaving" :allTags="allTags"
+    <ConfigModal v-if="showConfig" :configTarget="configTarget" :configSaving="configSaving" :allTags="allTags"
       @close="showConfig = false" @save="saveConfig" />
 
     <LogsModal v-if="showLogs" :monitor="currentMonitor" :logs="logs" :logsLoading="logsLoading"
@@ -221,7 +221,6 @@ const submitting = ref(false);
 
 // ── 配置面板 ──
 const configTarget = ref(null);
-const configForm = ref({});
 const configSaving = ref(false);
 
 // ── 日志面板 ──
@@ -249,7 +248,7 @@ const authFetch = async (url, options = {}) => {
     if (res.status === 401) {
         sessionStorage.removeItem('uptime_admin_token');
         sessionStorage.removeItem('uptime_admin_password');
-        location.reload();
+        storedToken.value = '';
     }
     return res;
 };
@@ -374,15 +373,14 @@ const cloneMonitor = (m) => {
 // ── 配置 ──
 const openConfig = (m) => {
     configTarget.value = m;
-    configForm.value = { name: m.name || '', url: m.url || '', link_url: m.link_url || '', method: m.method || 'GET', keyword: m.keyword || '', user_agent: m.user_agent || '', tags: m.tags || '', request_headers: m.request_headers || '', request_body: m.request_body || '', interval: m.interval ?? 300, check_ssl: m.check_ssl !== 0, check_domain: m.check_domain !== 0, alert_silence_uptime: m.alert_silence_uptime ?? 24, alert_silence_ssl: m.alert_silence_ssl ?? 24, alert_silence_domain: m.alert_silence_domain ?? 24, alert_error_rate: m.alert_error_rate ?? 0, is_private: m.is_private === 1 };
     showConfig.value = true;
 };
 
 const saveConfig = async (payload) => {
-    if (!configTarget.value) return;
-    const data = payload || configForm.value;
+    if (!configTarget.value || !payload) return;
     configSaving.value = true;
     try {
+        const data = payload;
         const body = { name: data.name, url: data.url, link_url: data.link_url || '', method: data.method || 'GET', keyword: data.keyword, user_agent: data.user_agent, tags: data.tags || '', request_headers: data.request_headers || '', request_body: data.request_body || '', interval: Number(data.interval), check_ssl: data.check_ssl ? 1 : 0, check_domain: data.check_domain ? 1 : 0, is_private: data.is_private ? 1 : 0, alert_silence_uptime: Number(data.alert_silence_uptime), alert_silence_ssl: Number(data.alert_silence_ssl), alert_silence_domain: Number(data.alert_silence_domain), alert_error_rate: Number(data.alert_error_rate ?? 0) };
         const res = await authFetch(`${API_BASE}/monitors/${configTarget.value.id}/config`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         if (res.ok) { addToast('配置已保存', 'success'); showConfig.value = false; fetchMonitors(); }
