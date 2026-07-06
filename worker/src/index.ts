@@ -287,85 +287,97 @@ app.get('/monitors/public', async (c) => {
   }
 });
 
-// ── 公开详情 API：含延迟、可用率、90天历史（无需鉴权）──
+// ── 公开详情 API：含延迟、可用率、90天历史（无需鉴权，60s 边缘缓存）──
+async function buildPublicDetailsResponse(env: Bindings): Promise<Response> {
+  const { results: monitors } = await env.DB.prepare(
+    'SELECT id, name, url, link_url, status, last_check, cert_expiry, domain_expiry, paused, tags, interval, is_private FROM monitors ORDER BY sort_order ASC, created_at ASC'
+  ).all();
+  if (!monitors || monitors.length === 0) {
+    return new Response(JSON.stringify({ monitors: [] }), {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${PUBLIC_DETAILS_CACHE_TTL}` },
+    });
+  }
+
+  const [dailyResult, live24Result, rollup7Result, rollup30Result, latResult] = await Promise.all([
+    env.DB.prepare(
+      "SELECT monitor_id, date, total_checks, successful_checks FROM daily_uptime WHERE date >= date('now','-90 days') ORDER BY monitor_id, date"
+    ).all(),
+    env.DB.prepare(`
+      SELECT monitor_id, COUNT(*) as t24, SUM(CASE WHEN is_fail=0 THEN 1 ELSE 0 END) as s24
+      FROM logs WHERE created_at >= datetime('now','-24 hours') GROUP BY monitor_id
+    `).all(),
+    env.DB.prepare(`
+      SELECT monitor_id, SUM(total_checks) as t7, SUM(successful_checks) as s7
+      FROM daily_uptime WHERE date >= date('now','-6 days') GROUP BY monitor_id
+    `).all(),
+    env.DB.prepare(`
+      SELECT monitor_id, SUM(total_checks) as t30, SUM(successful_checks) as s30
+      FROM daily_uptime WHERE date >= date('now','-29 days') GROUP BY monitor_id
+    `).all(),
+    env.DB.prepare(`
+      SELECT monitor_id, latency FROM logs
+      WHERE is_fail=0 AND created_at >= datetime('now','-24 hours')
+      ORDER BY created_at DESC LIMIT 500
+    `).all(),
+  ]);
+
+  type DS = { date: string; up: number; total: number };
+  const dMap = new Map<number, DS[]>();
+  for (const r of dailyResult.results || []) {
+    const id = r.monitor_id as number;
+    if (!dMap.has(id)) dMap.set(id, []);
+    dMap.get(id)!.push({ date: r.date as string, up: r.successful_checks as number, total: r.total_checks as number });
+  }
+
+  const s24Map = new Map<number, Record<string, number>>();
+  for (const r of live24Result.results || []) s24Map.set(r.monitor_id as number, r as Record<string, number>);
+  const s7Map = new Map<number, Record<string, number>>();
+  for (const r of rollup7Result.results || []) s7Map.set(r.monitor_id as number, r as Record<string, number>);
+  const s30Map = new Map<number, Record<string, number>>();
+  for (const r of rollup30Result.results || []) s30Map.set(r.monitor_id as number, r as Record<string, number>);
+
+  const lMap = new Map<number, number[]>();
+  for (const r of latResult.results || []) {
+    const id = r.monitor_id as number;
+    if (!lMap.has(id)) lMap.set(id, []);
+    const a = lMap.get(id)!;
+    if (a.length < 24) a.push(r.latency as number);
+  }
+  for (const [, a] of lMap) a.reverse();
+
+  const pct = (t?: number, s?: number) => t && t > 0 ? Number(((s! / t) * 100).toFixed(1)) : null;
+  const enriched = monitors.map(m => {
+    const id = m.id as number;
+    const s24 = s24Map.get(id);
+    const s7 = s7Map.get(id);
+    const s30 = s30Map.get(id);
+    const lat = lMap.get(id) || [];
+    return sanitizePublicMonitor({
+      ...m,
+      latency: lat.length > 0 ? lat[lat.length - 1] : null,
+      uptime_24h: pct(s24?.t24, s24?.s24),
+      uptime_7d: pct(s7?.t7, s7?.s7),
+      uptime_30d: pct(s30?.t30, s30?.s30),
+      daily_stats: dMap.get(id) || [],
+      recent_latencies: lat,
+    });
+  });
+
+  return new Response(JSON.stringify({ monitors: enriched }), {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${PUBLIC_DETAILS_CACHE_TTL}` },
+  });
+}
+
 app.get('/monitors/public/details', async (c) => {
   try {
-    const { results: monitors } = await c.env.DB.prepare(
-      'SELECT id, name, url, link_url, status, last_check, cert_expiry, domain_expiry, paused, tags, interval, is_private FROM monitors ORDER BY sort_order ASC, created_at ASC'
-    ).all();
-    if (!monitors || monitors.length === 0) return c.json({ monitors: [] });
+    const cache = caches.default;
+    const cacheKey = new Request(PUBLIC_DETAILS_CACHE_KEY, { method: 'GET' });
+    const cached = await cache.match(cacheKey);
+    if (cached) return cached;
 
-    await c.env.DB.prepare(`CREATE TABLE IF NOT EXISTS daily_uptime (
-      monitor_id INTEGER NOT NULL, date TEXT NOT NULL,
-      total_checks INTEGER DEFAULT 0, successful_checks INTEGER DEFAULT 0,
-      avg_latency INTEGER DEFAULT 0, PRIMARY KEY (monitor_id, date)
-    )`).run();
-
-    const [dailyResult, live24Result, rollup7Result, rollup30Result, latResult] = await Promise.all([
-      c.env.DB.prepare(
-        "SELECT monitor_id, date, total_checks, successful_checks FROM daily_uptime WHERE date >= date('now','-90 days') ORDER BY monitor_id, date"
-      ).all(),
-      c.env.DB.prepare(`
-        SELECT monitor_id, COUNT(*) as t24, SUM(CASE WHEN is_fail=0 THEN 1 ELSE 0 END) as s24
-        FROM logs WHERE created_at >= datetime('now','-24 hours') GROUP BY monitor_id
-      `).all(),
-      c.env.DB.prepare(`
-        SELECT monitor_id, SUM(total_checks) as t7, SUM(successful_checks) as s7
-        FROM daily_uptime WHERE date >= date('now','-6 days') GROUP BY monitor_id
-      `).all(),
-      c.env.DB.prepare(`
-        SELECT monitor_id, SUM(total_checks) as t30, SUM(successful_checks) as s30
-        FROM daily_uptime WHERE date >= date('now','-29 days') GROUP BY monitor_id
-      `).all(),
-      c.env.DB.prepare(`
-        SELECT monitor_id, latency FROM logs
-        WHERE is_fail=0 AND created_at >= datetime('now','-24 hours')
-        ORDER BY created_at DESC LIMIT 500
-      `).all(),
-    ]);
-
-    type DS = { date: string; up: number; total: number };
-    const dMap = new Map<number, DS[]>();
-    for (const r of dailyResult.results || []) {
-      const id = r.monitor_id as number;
-      if (!dMap.has(id)) dMap.set(id, []);
-      dMap.get(id)!.push({ date: r.date as string, up: r.successful_checks as number, total: r.total_checks as number });
-    }
-
-    const s24Map = new Map<number, Record<string, number>>();
-    for (const r of live24Result.results || []) s24Map.set(r.monitor_id as number, r as Record<string, number>);
-    const s7Map = new Map<number, Record<string, number>>();
-    for (const r of rollup7Result.results || []) s7Map.set(r.monitor_id as number, r as Record<string, number>);
-    const s30Map = new Map<number, Record<string, number>>();
-    for (const r of rollup30Result.results || []) s30Map.set(r.monitor_id as number, r as Record<string, number>);
-
-    const lMap = new Map<number, number[]>();
-    for (const r of latResult.results || []) {
-      const id = r.monitor_id as number;
-      if (!lMap.has(id)) lMap.set(id, []);
-      const a = lMap.get(id)!;
-      if (a.length < 24) a.push(r.latency as number);
-    }
-    for (const [, a] of lMap) a.reverse();
-
-    const pct = (t?: number, s?: number) => t && t > 0 ? Number(((s! / t) * 100).toFixed(1)) : null;
-    const enriched = monitors.map(m => {
-      const id = m.id as number;
-      const s24 = s24Map.get(id);
-      const s7 = s7Map.get(id);
-      const s30 = s30Map.get(id);
-      const lat = lMap.get(id) || [];
-      return sanitizePublicMonitor({
-        ...m,
-        latency: lat.length > 0 ? lat[lat.length - 1] : null,
-        uptime_24h: pct(s24?.t24, s24?.s24),
-        uptime_7d: pct(s7?.t7, s7?.s7),
-        uptime_30d: pct(s30?.t30, s30?.s30),
-        daily_stats: dMap.get(id) || [],
-        recent_latencies: lat,
-      });
-    });
-    return c.json({ monitors: enriched });
+    const response = await buildPublicDetailsResponse(c.env);
+    c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()));
+    return response;
   } catch (e: unknown) {
     return c.json({ error: e instanceof Error ? e.message : 'Unknown error' }, 500);
   }
@@ -417,6 +429,7 @@ app.post('/monitors', async (c) => {
       );
     }
 
+    c.executionCtx.waitUntil(invalidatePublicDetailsCache());
     return c.json({ success: true, id: newId }, 201);
   } catch (e: unknown) {
     return c.json({ error: e instanceof Error ? e.message : 'Unknown error' }, 500);
@@ -428,6 +441,7 @@ app.delete('/monitors/:id', async (c) => {
   try {
     await c.env.DB.prepare('DELETE FROM logs WHERE monitor_id = ?').bind(id).run();
     await c.env.DB.prepare('DELETE FROM monitors WHERE id = ?').bind(id).run();
+    c.executionCtx.waitUntil(invalidatePublicDetailsCache());
     return c.json({ success: true });
   } catch (e: unknown) {
     return c.json({ error: e instanceof Error ? e.message : 'Unknown error' }, 500);
@@ -491,6 +505,7 @@ app.patch('/monitors/:id/config', async (c) => {
     values.push(id);
 
     await c.env.DB.prepare(`UPDATE monitors SET ${fields.join(', ')} WHERE id = ?`).bind(...values).run();
+    c.executionCtx.waitUntil(invalidatePublicDetailsCache());
     return c.json({ success: true });
   } catch (e: unknown) {
     return c.json({ error: e instanceof Error ? e.message : 'Unknown error' }, 500);
@@ -517,6 +532,7 @@ app.post('/monitors/:id/check', async (c) => {
       })()
     );
 
+    c.executionCtx.waitUntil(invalidatePublicDetailsCache());
     return c.json({ success: true });
   } catch (e: unknown) {
     return c.json({ error: e instanceof Error ? e.message : 'Unknown error' }, 500);
@@ -535,6 +551,7 @@ app.patch('/monitors/:id/pause', async (c) => {
 
     await c.env.DB.prepare('UPDATE monitors SET paused = ?, status = ?, retry_count = 0 WHERE id = ?')
       .bind(newPaused, newStatus, id).run();
+    c.executionCtx.waitUntil(invalidatePublicDetailsCache());
     return c.json({ success: true, paused: newPaused === 1, status: newStatus });
   } catch (e: unknown) {
     return c.json({ error: e instanceof Error ? e.message : 'Unknown error' }, 500);
@@ -607,6 +624,7 @@ app.post('/monitors/batch', async (c) => {
       default:
         return c.json({ error: 'Invalid action' }, 400);
     }
+    c.executionCtx.waitUntil(invalidatePublicDetailsCache());
     return c.json({ success: true, affected: ids.length });
   } catch (e: unknown) {
     return c.json({ error: e instanceof Error ? e.message : 'Unknown error' }, 500);
@@ -624,6 +642,7 @@ app.put('/monitors/reorder', async (c) => {
       c.env.DB.prepare('UPDATE monitors SET sort_order = ? WHERE id = ?').bind(idx, id)
     );
     await c.env.DB.batch(stmts);
+    c.executionCtx.waitUntil(invalidatePublicDetailsCache());
     return c.json({ success: true });
   } catch (e: unknown) {
     return c.json({ error: e instanceof Error ? e.message : 'Unknown error' }, 500);
@@ -673,6 +692,8 @@ app.post('/incidents', async (c) => {
     const result = await c.env.DB.prepare(
       'INSERT INTO incidents (title, description, severity, status, type, scheduled_start, scheduled_end, affected_monitors, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     ).bind(body.title, body.description || null, severity, 'active', type, scheduledStart, scheduledEnd, body.affected_monitors || null, now, now).run();
+    invalidateMaintenanceCache();
+    c.executionCtx.waitUntil(invalidatePublicDetailsCache());
     return c.json({ success: true, id: result.meta.last_row_id }, 201);
   } catch (e: unknown) {
     return c.json({ error: e instanceof Error ? e.message : 'Unknown error' }, 500);
@@ -706,6 +727,8 @@ app.patch('/incidents/:id', async (c) => {
 
     await c.env.DB.prepare(`UPDATE incidents SET ${fields.join(', ')} WHERE id = ?`)
       .bind(...values).run();
+    invalidateMaintenanceCache();
+    c.executionCtx.waitUntil(invalidatePublicDetailsCache());
     return c.json({ success: true });
   } catch (e: unknown) {
     return c.json({ error: e instanceof Error ? e.message : 'Unknown error' }, 500);
@@ -716,6 +739,8 @@ app.delete('/incidents/:id', async (c) => {
   const id = c.req.param('id');
   try {
     await c.env.DB.prepare('DELETE FROM incidents WHERE id = ?').bind(id).run();
+    invalidateMaintenanceCache();
+    c.executionCtx.waitUntil(invalidatePublicDetailsCache());
     return c.json({ success: true });
   } catch (e: unknown) {
     return c.json({ error: e instanceof Error ? e.message : 'Unknown error' }, 500);
@@ -895,8 +920,50 @@ app.post('/test-alert', async (c) => {
 // ============================================================
 
 const LOGS_PER_MONITOR = 500;
+const PUBLIC_DETAILS_CACHE_KEY = 'https://uptime-monitor.internal/cache/public-details';
+const PUBLIC_DETAILS_CACHE_TTL = 60;
+const MAINTENANCE_CACHE_TTL_MS = 5 * 60 * 1000;
+
+let maintenanceCache: { monitorIds: Set<number>; expiresAt: number } | null = null;
+
+async function invalidatePublicDetailsCache() {
+  try {
+    await caches.default.delete(new Request(PUBLIC_DETAILS_CACHE_KEY, { method: 'GET' }));
+  } catch { /* ignore */ }
+}
+
+function invalidateMaintenanceCache() {
+  maintenanceCache = null;
+}
+
+async function getMaintenanceMonitorIds(env: Bindings): Promise<Set<number>> {
+  const now = Date.now();
+  if (maintenanceCache && maintenanceCache.expiresAt > now) {
+    return maintenanceCache.monitorIds;
+  }
+
+  const ids = new Set<number>();
+  try {
+    const { results } = await env.DB.prepare(
+      "SELECT affected_monitors FROM incidents WHERE type = 'maintenance' AND status = 'active' AND datetime(scheduled_start) <= datetime('now') AND datetime(scheduled_end) >= datetime('now')"
+    ).all<{ affected_monitors: string | null }>();
+    for (const m of results || []) {
+      if (!m.affected_monitors) continue;
+      for (const part of m.affected_monitors.split(',')) {
+        const id = Number(part.trim());
+        if (id) ids.add(id);
+      }
+    }
+  } catch { /* ignore */ }
+
+  maintenanceCache = { monitorIds: ids, expiresAt: now + MAINTENANCE_CACHE_TTL_MS };
+  return ids;
+}
 
 async function ensureDbIndexes(env: Bindings) {
+  const row = await env.DB.prepare("SELECT value FROM settings WHERE key = 'db_indexes_ready'").first<{ value: string }>();
+  if (row?.value === '1') return;
+
   await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_logs_monitor_created ON logs(monitor_id, created_at DESC)').run();
   await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_logs_created ON logs(created_at)').run();
   await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_logs_fail_created ON logs(is_fail, created_at DESC)').run();
@@ -905,6 +972,7 @@ async function ensureDbIndexes(env: Bindings) {
     total_checks INTEGER DEFAULT 0, successful_checks INTEGER DEFAULT 0,
     avg_latency INTEGER DEFAULT 0, PRIMARY KEY (monitor_id, date)
   )`).run();
+  await env.DB.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('db_indexes_ready', '1')").run();
 }
 
 async function ensureDailyUptimeBackfill(env: Bindings) {
@@ -995,15 +1063,16 @@ async function runScheduledTasks(env: Bindings) {
 async function checkSites(env: Bindings) {
   console.log('Starting scheduled check...');
   const now = Date.now();
+  const maintenanceIds = await getMaintenanceMonitorIds(env);
   const { results } = await env.DB.prepare(`
     SELECT id, name, url, method, request_headers, request_body, interval, status,
            retry_count, last_check, keyword, user_agent, check_info_status, paused,
            alert_silence_uptime, alert_error_rate, last_alert_uptime
     FROM monitors
+    WHERE paused = 0 AND interval > 0
   `).all<Monitor>();
   const tasks = results.map(async (monitor) => {
-    if (monitor.paused === 1 || monitor.interval === 0) return;
-    if (isTimeToCheck(monitor, now)) await performCheck(monitor, env);
+    if (isTimeToCheck(monitor, now)) await performCheck(monitor, env, maintenanceIds);
   });
   await Promise.all(tasks);
 }
@@ -1022,7 +1091,7 @@ function isTimeToCheck(monitor: Monitor, now: number): boolean {
   return now - lastCheck >= intervalMs;
 }
 
-async function performCheck(monitor: Monitor, env: Bindings) {
+async function performCheck(monitor: Monitor, env: Bindings, maintenanceIds?: Set<number>) {
   const startTime = Date.now();
   let status = 200;
   let isFail = false;
@@ -1107,23 +1176,12 @@ async function performCheck(monitor: Monitor, env: Bindings) {
   let newRetryCount = monitor.retry_count;
 
   // 检查是否在计划维护窗口内（如果是，跳过告警）
-  try {
-    const { results: activeMaint } = await env.DB.prepare(
-      "SELECT affected_monitors FROM incidents WHERE type = 'maintenance' AND status = 'active' AND datetime(scheduled_start) <= datetime('now') AND datetime(scheduled_end) >= datetime('now')"
-    ).all<{ affected_monitors: string | null }>();
-    if (activeMaint && activeMaint.length > 0) {
-      const inMaintenance = activeMaint.some(m => {
-        if (!m.affected_monitors) return false;
-        return m.affected_monitors.split(',').map(s => s.trim()).includes(String(monitor.id));
-      });
-      if (inMaintenance) {
-        // 在维护窗口内，跳过状态变更告警
-        await env.DB.prepare('UPDATE monitors SET last_check = ?, status = ?, retry_count = ? WHERE id = ?')
-          .bind(new Date().toISOString(), newStatus, newRetryCount, monitor.id).run();
-        return;
-      }
-    }
-  } catch { /* ignore maintenance check errors */ }
+  const maintIds = maintenanceIds ?? await getMaintenanceMonitorIds(env);
+  if (maintIds.has(monitor.id)) {
+    await env.DB.prepare('UPDATE monitors SET last_check = ?, status = ?, retry_count = ? WHERE id = ?')
+      .bind(new Date().toISOString(), newStatus, newRetryCount, monitor.id).run();
+    return;
+  }
 
   const silenceHoursUptime = monitor.alert_silence_uptime ?? 24;
   const lastAlertUptimeMs = monitor.last_alert_uptime ? new Date(monitor.last_alert_uptime).getTime() : 0;
