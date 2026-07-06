@@ -227,24 +227,40 @@
 | **[domain-autocheck](https://github.com/jia0327/domain-autocheck)** | 域名 WHOIS / 到期、续费提醒、多注册商、DNSHE 导入、CF NS 徽章 |
 | **[CF-Quota-Dashboard](https://github.com/jia0327/CF-Quota-Dashboard)** | CF 账号免费额度（D1 / KV / Workers 等）、阈值告警、多账号 |
 
-### 各类型监控的推荐配置
+### SSL / 域名检测说明
 
-**1. CF 托管服务（Workers / Pages、橙云代理）**
+- **SSL 检测**：Cloudflare 代理 / Workers / Pages 下 **Universal SSL 自动续期**，**无需监控**；Uptime Monitor 与 domain-autocheck **都不必**做 SSL 到期检测
+- **域名检测**：交给 [domain-autocheck](https://github.com/jia0327/domain-autocheck)；Uptime Monitor 中应**关闭**「域名到期检测」，避免与 WHOIS 提醒重复告警
+- domain-autocheck **不需要**也**不建议**增加 SSL 检测——保持专注域名 WHOIS / 到期即可
 
-- 关闭 **SSL 证书到期**检查（CF Universal SSL 自动续期）
-- 关闭 **域名到期**检查（交由 [domain-autocheck](https://github.com/jia0327/domain-autocheck) 负责）
-- 探测 URL 使用轻量健康端点，如 `/api/health`，避免 SPA 管理页 `/admin`
-- 非关键服务 `interval` 建议 **≥ 5 分钟**，降低 D1 读压力
+### 具体操作步骤
 
-**2. 书签 / 内网 NAS（`interval = 0`）**
+**Uptime Monitor 后台**（每个监控项 → 配置）：
 
-- 关闭 SSL 与域名检查
-- 不进行 HTTP 探测，仅作跳转导航
+| 监控类型 | SSL 证书到期检测 | 域名到期检测 |
+|----------|------------------|--------------|
+| CF 托管（Workers / Pages、橙云代理） | 关闭 | 关闭 |
+| 书签 / 内网 NAS（`interval = 0`） | 关闭 | 关闭 |
+| 非 CF 自管证书（少数场景） | 可按需保留 | 仍建议关闭，交由 domain-autocheck |
 
-**3. 自托管 / 非 CF 源站（手动 SSL）**
+- 非关键 CF 服务 `interval` 建议 **≥ 5 分钟**，降低 D1 读压力
 
-- 按需保留 SSL 检查
-- 域名检查可选；若已部署 domain-autocheck，建议在 Uptime Monitor 中关闭，避免重复告警
+**[domain-autocheck](https://github.com/jia0327/domain-autocheck)**：
+
+- 只添加需要盯到期的域名
+- 配置 Cron，提前 **N 天**发送到期通知
+- DNSHE 子域（如 `ccwu.cc`、`onlydev.cc` 等）用 **API 导入**
+- **无需**也**无法**配置 SSL 相关项（项目本身不提供）
+
+**[CF-Quota-Dashboard](https://github.com/jia0327/CF-Quota-Dashboard)**：
+
+- 添加 Cloudflare 账号**只读 Token**
+- 重点查看 **D1 Rows Read / Written** 阈值告警（Uptime Monitor 优化后仍接近额度时尤其有用）
+
+### 检测 URL 建议
+
+- 探测 URL 使用轻量健康端点，如 `/api/health`、`/health`
+- **不要**探测 SPA 管理页（如 `/admin`），避免把前端路由当成服务宕机
 
 ### 生态组合清单
 
