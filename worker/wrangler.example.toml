@@ -2,9 +2,9 @@ name = "uptime-worker"
 main = "src/index.ts"
 compatibility_date = "2024-02-08"
 
-# 定时任务：每 5 分钟触发（RETRYING 重试粒度同步为 5 分钟，显著降低 Worker/D1 空跑）
+# 定时任务：每分钟触发（按各监控 interval 决定是否实际探测）
 [triggers]
-crons = ["*/5 * * * *"]
+crons = ["* * * * *"]
 
 # D1 数据库配置
 # 请在终端运行 'npx wrangler d1 create uptime-db' 获取 database_id 并替换下方的值

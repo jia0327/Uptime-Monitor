@@ -68,6 +68,11 @@
           24h {{ monitor.uptime_24h }}%
         </div>
 
+        <div v-if="monitor.uptime_7d != null && !monitor.paused && !isBookmark" class="px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-mono font-bold border"
+          :class="monitor.uptime_7d >= 99.9 ? 'text-emerald-600 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20' : monitor.uptime_7d >= 95 ? 'text-yellow-600 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-400/10 border-yellow-200 dark:border-yellow-400/20' : 'text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20'">
+          7d {{ monitor.uptime_7d }}%
+        </div>
+
         <svg v-if="sparkline && !monitor.paused && !isBookmark" class="sparkline-wrap hidden lg:block w-[92px] h-[26px]" :class="monitor.status === 'DOWN' ? 'text-red-500' : monitor.status === 'RETRYING' ? 'text-yellow-500' : 'text-emerald-500'" viewBox="0 0 120 28" preserveAspectRatio="none" aria-label="延迟趋势">
           <path :d="sparkline.area" class="sparkline-area" fill="currentColor"/>
           <path :d="sparkline.line" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>

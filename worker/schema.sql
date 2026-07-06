@@ -90,7 +90,7 @@ CREATE TABLE settings (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 每日可用率汇总表（90天可用性条用）
+-- 每日可用率汇总表（保留约 30 天，前端展示近 7 天）
 CREATE TABLE IF NOT EXISTS daily_uptime (
   monitor_id INTEGER NOT NULL,
   date TEXT NOT NULL,              -- YYYY-MM-DD

@@ -287,7 +287,7 @@ app.get('/monitors/public', async (c) => {
   }
 });
 
-// ── 公开详情 API：含延迟、可用率、90天历史（无需鉴权，60s 边缘缓存）──
+// ── 公开详情 API：含延迟、可用率、7天历史（无需鉴权，60s 边缘缓存）──
 async function buildPublicDetailsResponse(env: Bindings): Promise<Response> {
   const { results: monitors } = await env.DB.prepare(
     'SELECT id, name, url, link_url, status, last_check, cert_expiry, domain_expiry, paused, tags, interval, is_private FROM monitors ORDER BY sort_order ASC, created_at ASC'
@@ -298,9 +298,9 @@ async function buildPublicDetailsResponse(env: Bindings): Promise<Response> {
     });
   }
 
-  const [dailyResult, live24Result, rollup7Result, rollup30Result, latResult] = await Promise.all([
+  const [dailyResult, live24Result, rollup7Result, latResult] = await Promise.all([
     env.DB.prepare(
-      "SELECT monitor_id, date, total_checks, successful_checks FROM daily_uptime WHERE date >= date('now','-90 days') ORDER BY monitor_id, date"
+      "SELECT monitor_id, date, total_checks, successful_checks FROM daily_uptime WHERE date >= date('now','-6 days') ORDER BY monitor_id, date"
     ).all(),
     env.DB.prepare(`
       SELECT monitor_id, COUNT(*) as t24, SUM(CASE WHEN is_fail=0 THEN 1 ELSE 0 END) as s24
@@ -309,10 +309,6 @@ async function buildPublicDetailsResponse(env: Bindings): Promise<Response> {
     env.DB.prepare(`
       SELECT monitor_id, SUM(total_checks) as t7, SUM(successful_checks) as s7
       FROM daily_uptime WHERE date >= date('now','-6 days') GROUP BY monitor_id
-    `).all(),
-    env.DB.prepare(`
-      SELECT monitor_id, SUM(total_checks) as t30, SUM(successful_checks) as s30
-      FROM daily_uptime WHERE date >= date('now','-29 days') GROUP BY monitor_id
     `).all(),
     env.DB.prepare(`
       SELECT monitor_id, latency FROM logs
@@ -333,8 +329,6 @@ async function buildPublicDetailsResponse(env: Bindings): Promise<Response> {
   for (const r of live24Result.results || []) s24Map.set(r.monitor_id as number, r as Record<string, number>);
   const s7Map = new Map<number, Record<string, number>>();
   for (const r of rollup7Result.results || []) s7Map.set(r.monitor_id as number, r as Record<string, number>);
-  const s30Map = new Map<number, Record<string, number>>();
-  for (const r of rollup30Result.results || []) s30Map.set(r.monitor_id as number, r as Record<string, number>);
 
   const lMap = new Map<number, number[]>();
   for (const r of latResult.results || []) {
@@ -350,14 +344,12 @@ async function buildPublicDetailsResponse(env: Bindings): Promise<Response> {
     const id = m.id as number;
     const s24 = s24Map.get(id);
     const s7 = s7Map.get(id);
-    const s30 = s30Map.get(id);
     const lat = lMap.get(id) || [];
     return sanitizePublicMonitor({
       ...m,
       latency: lat.length > 0 ? lat[lat.length - 1] : null,
       uptime_24h: pct(s24?.t24, s24?.s24),
       uptime_7d: pct(s7?.t7, s7?.s7),
-      uptime_30d: pct(s30?.t30, s30?.s30),
       daily_stats: dMap.get(id) || [],
       recent_latencies: lat,
     });
@@ -578,7 +570,6 @@ app.get('/monitors/:id/stats', async (c) => {
     const periods = [
       { key: 'h24', hours: 24 },
       { key: 'd7',  hours: 24 * 7 },
-      { key: 'd30', hours: 24 * 30 },
     ];
 
     const stats: Record<string, string | null> = {};
@@ -984,7 +975,7 @@ async function ensureDailyUptimeBackfill(env: Bindings) {
     SELECT monitor_id, date(created_at), COUNT(*), SUM(CASE WHEN is_fail=0 THEN 1 ELSE 0 END),
            COALESCE(CAST(AVG(CASE WHEN is_fail=0 THEN latency END) AS INTEGER), 0)
     FROM logs
-    WHERE created_at >= date('now','-90 days') AND created_at < date('now')
+    WHERE created_at >= date('now','-30 days') AND created_at < date('now')
     GROUP BY monitor_id, date(created_at)
   `).run();
 }
@@ -1025,7 +1016,7 @@ async function aggregateDailyUptime(env: Bindings) {
       WHERE created_at >= date('now','-1 day') AND created_at < date('now')
       GROUP BY monitor_id, date(created_at)
     `).run();
-    await env.DB.prepare("DELETE FROM daily_uptime WHERE date < date('now','-90 days')").run();
+    await env.DB.prepare("DELETE FROM daily_uptime WHERE date < date('now','-30 days')").run();
     console.log('Daily uptime aggregation completed.');
   } catch (e) { console.error('Daily uptime aggregation error:', e); }
 }

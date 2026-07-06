@@ -13,10 +13,10 @@
       </div>
     </div>
     <div class="flex justify-between items-center mt-1.5">
-      <span class="text-[10px] font-mono text-slate-400/60 dark:text-slate-600/60">90 天前</span>
-      <span v-if="monitor.uptime_30d != null" class="text-[11px] font-mono font-semibold"
-        :class="monitor.uptime_30d >= 99.9 ? 'text-emerald-500' : monitor.uptime_30d >= 95 ? 'text-yellow-500' : 'text-red-500'"
-      >近30天: {{ monitor.uptime_30d }}%</span>
+      <span class="text-[10px] font-mono text-slate-400/60 dark:text-slate-600/60">7 天前</span>
+      <span v-if="monitor.uptime_7d != null" class="text-[11px] font-mono font-semibold"
+        :class="monitor.uptime_7d >= 99.9 ? 'text-emerald-500' : monitor.uptime_7d >= 95 ? 'text-yellow-500' : 'text-red-500'"
+      >近7天: {{ monitor.uptime_7d }}%</span>
       <span class="text-[10px] font-mono text-slate-400/60 dark:text-slate-600/60">昨天</span>
     </div>
   </div>
@@ -30,7 +30,7 @@ const props = defineProps({
 });
 
 /**
- * 生成 90 天日期数组，优化：只计算一次基准时戳，避免每格重复调用 Date.now()
+ * 生成 7 天日期数组，优化：只计算一次基准时戳，避免每格重复调用 Date.now()
  */
 const displayDays = computed(() => {
     const stats = props.monitor.daily_stats || [];
@@ -39,7 +39,7 @@ const displayDays = computed(() => {
 
     const now = Date.now();
     const days = [];
-    for (let i = 89; i >= 0; i--) {
+    for (let i = 6; i >= 0; i--) {
         const ds = new Date(now - i * 86400000).toISOString().slice(0, 10);
         const s = map[ds];
         days.push({ date: ds, up: s ? s.up : 0, total: s ? s.total : 0 });

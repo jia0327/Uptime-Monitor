@@ -14,7 +14,7 @@
         <!-- Uptime 统计 + P95/P99 -->
         <div v-if="uptimeStats && (uptimeStats.h24 !== null || uptimeStats.d7 !== null)" class="px-8 py-3 border-b border-white/5 bg-slate-900/30">
           <div class="flex items-center gap-6 text-xs flex-wrap">
-            <div v-for="stat in [{label:'24h 可用率', val: uptimeStats.h24},{label:'7d 可用率', val: uptimeStats.d7},{label:'30d 可用率', val: uptimeStats.d30}]" :key="stat.label">
+            <div v-for="stat in [{label:'24h 可用率', val: uptimeStats.h24},{label:'7d 可用率', val: uptimeStats.d7}]" :key="stat.label">
               <span class="text-slate-400 font-medium">{{ stat.label }}</span>
               <span class="font-mono font-bold ml-1.5" :class="stat.val === null ? 'text-slate-500' : Number(stat.val) >= 99 ? 'text-green-400' : Number(stat.val) >= 95 ? 'text-yellow-400' : 'text-red-400'">{{ stat.val !== null ? stat.val + '%' : 'N/A' }}</span>
             </div>

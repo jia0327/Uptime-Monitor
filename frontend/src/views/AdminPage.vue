@@ -467,7 +467,7 @@ const sparklineComputed = computed(() => {
 const uptimeStats = computed(() => {
     if (!logs.value || logs.value.length === 0) return null;
     const calc = (hours) => { const cutoff = Date.now() - hours * 3600000; const filtered = logs.value.filter(l => { const t = new Date(l.created_at).getTime(); return !isNaN(t) && t >= cutoff; }); if (filtered.length === 0) return null; return ((filtered.filter(l => !l.is_fail).length / filtered.length) * 100).toFixed(1); };
-    return { h24: calc(24), d7: calc(24*7), d30: calc(24*30) };
+    return { h24: calc(24), d7: calc(24*7) };
 });
 
 const latencyPercentiles = computed(() => {
