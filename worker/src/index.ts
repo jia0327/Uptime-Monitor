@@ -295,59 +295,52 @@ app.get('/monitors/public/details', async (c) => {
     ).all();
     if (!monitors || monitors.length === 0) return c.json({ monitors: [] });
 
-    // 自动建表（兼容未迁移数据库）
     await c.env.DB.prepare(`CREATE TABLE IF NOT EXISTS daily_uptime (
       monitor_id INTEGER NOT NULL, date TEXT NOT NULL,
       total_checks INTEGER DEFAULT 0, successful_checks INTEGER DEFAULT 0,
       avg_latency INTEGER DEFAULT 0, PRIMARY KEY (monitor_id, date)
     )`).run();
 
-    // 首次运行时回填历史数据
-    const cnt = await c.env.DB.prepare('SELECT COUNT(*) as c FROM daily_uptime').first<{ c: number }>();
-    if (cnt && cnt.c === 0) {
-      await c.env.DB.prepare(`
-        INSERT OR IGNORE INTO daily_uptime (monitor_id, date, total_checks, successful_checks, avg_latency)
-        SELECT monitor_id, date(created_at), COUNT(*), SUM(CASE WHEN is_fail=0 THEN 1 ELSE 0 END),
-               COALESCE(CAST(AVG(CASE WHEN is_fail=0 THEN latency END) AS INTEGER), 0)
-        FROM logs
-        WHERE created_at >= date('now','-90 days') AND created_at < date('now')
-        GROUP BY monitor_id, date(created_at)
-      `).run();
-    }
+    const [dailyResult, live24Result, rollup7Result, rollup30Result, latResult] = await Promise.all([
+      c.env.DB.prepare(
+        "SELECT monitor_id, date, total_checks, successful_checks FROM daily_uptime WHERE date >= date('now','-90 days') ORDER BY monitor_id, date"
+      ).all(),
+      c.env.DB.prepare(`
+        SELECT monitor_id, COUNT(*) as t24, SUM(CASE WHEN is_fail=0 THEN 1 ELSE 0 END) as s24
+        FROM logs WHERE created_at >= datetime('now','-24 hours') GROUP BY monitor_id
+      `).all(),
+      c.env.DB.prepare(`
+        SELECT monitor_id, SUM(total_checks) as t7, SUM(successful_checks) as s7
+        FROM daily_uptime WHERE date >= date('now','-6 days') GROUP BY monitor_id
+      `).all(),
+      c.env.DB.prepare(`
+        SELECT monitor_id, SUM(total_checks) as t30, SUM(successful_checks) as s30
+        FROM daily_uptime WHERE date >= date('now','-29 days') GROUP BY monitor_id
+      `).all(),
+      c.env.DB.prepare(`
+        SELECT monitor_id, latency FROM logs
+        WHERE is_fail=0 AND created_at >= datetime('now','-24 hours')
+        ORDER BY created_at DESC LIMIT 500
+      `).all(),
+    ]);
 
-    // 90天每日可用率
-    const { results: dailyRows } = await c.env.DB.prepare(
-      "SELECT monitor_id, date, total_checks, successful_checks FROM daily_uptime WHERE date >= date('now','-90 days') ORDER BY monitor_id, date"
-    ).all();
-
-    // 实时统计（24h/7d/30d 合并查询）
-    const { results: liveRows } = await c.env.DB.prepare(`
-      SELECT monitor_id,
-        SUM(CASE WHEN created_at >= datetime('now','-24 hours') THEN 1 ELSE 0 END) as t24,
-        SUM(CASE WHEN created_at >= datetime('now','-24 hours') AND is_fail=0 THEN 1 ELSE 0 END) as s24,
-        SUM(CASE WHEN created_at >= datetime('now','-7 days') THEN 1 ELSE 0 END) as t7,
-        SUM(CASE WHEN created_at >= datetime('now','-7 days') AND is_fail=0 THEN 1 ELSE 0 END) as s7,
-        COUNT(*) as t30, SUM(CASE WHEN is_fail=0 THEN 1 ELSE 0 END) as s30
-      FROM logs WHERE created_at >= datetime('now','-30 days') GROUP BY monitor_id
-    `).all();
-
-    // 最近延迟（折线图用）
-    const { results: latRows } = await c.env.DB.prepare(
-      'SELECT monitor_id, latency FROM logs WHERE is_fail=0 ORDER BY created_at DESC LIMIT 200'
-    ).all();
-
-    // 组装查找表
     type DS = { date: string; up: number; total: number };
     const dMap = new Map<number, DS[]>();
-    for (const r of dailyRows || []) {
+    for (const r of dailyResult.results || []) {
       const id = r.monitor_id as number;
       if (!dMap.has(id)) dMap.set(id, []);
       dMap.get(id)!.push({ date: r.date as string, up: r.successful_checks as number, total: r.total_checks as number });
     }
-    const sMap = new Map<number, Record<string, number>>();
-    for (const r of liveRows || []) sMap.set(r.monitor_id as number, r as Record<string, number>);
+
+    const s24Map = new Map<number, Record<string, number>>();
+    for (const r of live24Result.results || []) s24Map.set(r.monitor_id as number, r as Record<string, number>);
+    const s7Map = new Map<number, Record<string, number>>();
+    for (const r of rollup7Result.results || []) s7Map.set(r.monitor_id as number, r as Record<string, number>);
+    const s30Map = new Map<number, Record<string, number>>();
+    for (const r of rollup30Result.results || []) s30Map.set(r.monitor_id as number, r as Record<string, number>);
+
     const lMap = new Map<number, number[]>();
-    for (const r of latRows || []) {
+    for (const r of latResult.results || []) {
       const id = r.monitor_id as number;
       if (!lMap.has(id)) lMap.set(id, []);
       const a = lMap.get(id)!;
@@ -357,10 +350,20 @@ app.get('/monitors/public/details', async (c) => {
 
     const pct = (t?: number, s?: number) => t && t > 0 ? Number(((s! / t) * 100).toFixed(1)) : null;
     const enriched = monitors.map(m => {
-      const id = m.id as number, s = sMap.get(id), lat = lMap.get(id) || [];
-      return sanitizePublicMonitor({ ...m, latency: lat.length > 0 ? lat[lat.length - 1] : null,
-        uptime_24h: pct(s?.t24, s?.s24), uptime_7d: pct(s?.t7, s?.s7), uptime_30d: pct(s?.t30, s?.s30),
-        daily_stats: dMap.get(id) || [], recent_latencies: lat });
+      const id = m.id as number;
+      const s24 = s24Map.get(id);
+      const s7 = s7Map.get(id);
+      const s30 = s30Map.get(id);
+      const lat = lMap.get(id) || [];
+      return sanitizePublicMonitor({
+        ...m,
+        latency: lat.length > 0 ? lat[lat.length - 1] : null,
+        uptime_24h: pct(s24?.t24, s24?.s24),
+        uptime_7d: pct(s7?.t7, s7?.s7),
+        uptime_30d: pct(s30?.t30, s30?.s30),
+        daily_stats: dMap.get(id) || [],
+        recent_latencies: lat,
+      });
     });
     return c.json({ monitors: enriched });
   } catch (e: unknown) {
@@ -761,21 +764,19 @@ app.put('/settings', async (c) => {
 
 app.get('/health', async (c) => {
   try {
-    const [monitors, logs, channels, daily, lastLog] = await Promise.all([
+    const [monitors, channels, daily, lastCheck] = await Promise.all([
       c.env.DB.prepare('SELECT COUNT(*) as c FROM monitors').first<{ c: number }>(),
-      c.env.DB.prepare('SELECT COUNT(*) as c FROM logs').first<{ c: number }>(),
       c.env.DB.prepare('SELECT COUNT(*) as c FROM notification_channels WHERE enabled = 1').first<{ c: number }>(),
       c.env.DB.prepare('SELECT MAX(date) as d FROM daily_uptime').first<{ d: string | null }>(),
-      c.env.DB.prepare('SELECT MAX(created_at) as t FROM logs').first<{ t: string | null }>(),
+      c.env.DB.prepare('SELECT MAX(last_check) as t FROM monitors').first<{ t: string | null }>(),
     ]);
     return c.json({
       ok: true,
       checked_at: new Date().toISOString(),
       monitors: monitors?.c ?? 0,
-      logs: logs?.c ?? 0,
       enabled_channels: channels?.c ?? 0,
       latest_daily_uptime: daily?.d || null,
-      latest_log_at: lastLog?.t || null,
+      latest_log_at: lastCheck?.t || null,
     });
   } catch (e: unknown) {
     return c.json({ ok: false, error: e instanceof Error ? e.message : 'Unknown error' }, 500);
@@ -890,6 +891,53 @@ app.post('/test-alert', async (c) => {
 });
 
 // ============================================================
+// D1 额度优化：索引、日汇总、日志保留
+// ============================================================
+
+const LOGS_PER_MONITOR = 500;
+
+async function ensureDbIndexes(env: Bindings) {
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_logs_monitor_created ON logs(monitor_id, created_at DESC)').run();
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_logs_created ON logs(created_at)').run();
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_logs_fail_created ON logs(is_fail, created_at DESC)').run();
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS daily_uptime (
+    monitor_id INTEGER NOT NULL, date TEXT NOT NULL,
+    total_checks INTEGER DEFAULT 0, successful_checks INTEGER DEFAULT 0,
+    avg_latency INTEGER DEFAULT 0, PRIMARY KEY (monitor_id, date)
+  )`).run();
+}
+
+async function ensureDailyUptimeBackfill(env: Bindings) {
+  const cnt = await env.DB.prepare('SELECT COUNT(*) as c FROM daily_uptime').first<{ c: number }>();
+  if (!cnt || cnt.c > 0) return;
+  console.log('Backfilling daily_uptime from logs...');
+  await env.DB.prepare(`
+    INSERT OR IGNORE INTO daily_uptime (monitor_id, date, total_checks, successful_checks, avg_latency)
+    SELECT monitor_id, date(created_at), COUNT(*), SUM(CASE WHEN is_fail=0 THEN 1 ELSE 0 END),
+           COALESCE(CAST(AVG(CASE WHEN is_fail=0 THEN latency END) AS INTEGER), 0)
+    FROM logs
+    WHERE created_at >= date('now','-90 days') AND created_at < date('now')
+    GROUP BY monitor_id, date(created_at)
+  `).run();
+}
+
+async function bumpDailyUptime(env: Bindings, monitorId: number, isFail: boolean, latency: number) {
+  const success = isFail ? 0 : 1;
+  const lat = isFail ? 0 : latency;
+  await env.DB.prepare(`
+    INSERT INTO daily_uptime (monitor_id, date, total_checks, successful_checks, avg_latency)
+    VALUES (?, date('now'), 1, ?, ?)
+    ON CONFLICT(monitor_id, date) DO UPDATE SET
+      total_checks = daily_uptime.total_checks + 1,
+      successful_checks = daily_uptime.successful_checks + excluded.successful_checks,
+      avg_latency = CASE WHEN excluded.successful_checks = 1 THEN
+        CAST((daily_uptime.avg_latency * daily_uptime.successful_checks + excluded.avg_latency)
+          / (daily_uptime.successful_checks + 1) AS INTEGER)
+      ELSE daily_uptime.avg_latency END
+  `).bind(monitorId, success, lat).run();
+}
+
+// ============================================================
 // 每日统计聚合
 // ============================================================
 
@@ -927,6 +975,9 @@ export default {
 };
 
 async function runScheduledTasks(env: Bindings) {
+  await ensureDbIndexes(env);
+  await ensureDailyUptimeBackfill(env);
+
   const hour = new Date().getUTCHours();
   const tasks: Promise<void>[] = [checkSites(env)];
   if (hour === 2) {
@@ -1044,6 +1095,7 @@ async function performCheck(monitor: Monitor, env: Bindings) {
   // 先写日志，再检查错误率
   await env.DB.prepare('INSERT INTO logs (monitor_id, status_code, latency, is_fail, reason) VALUES (?, ?, ?, ?, ?)')
     .bind(monitor.id, status, latency, isFail ? 1 : 0, reason || null).run();
+  await bumpDailyUptime(env, monitor.id, isFail, latency);
 
   // 错误率阈值告警
   if (!isFail && monitor.alert_error_rate > 0) {
@@ -1191,9 +1243,9 @@ async function cleanupLogs(env: Bindings) {
     for (const monitor of results) {
       await env.DB.prepare(`
         DELETE FROM logs WHERE id IN (
-          SELECT id FROM logs WHERE monitor_id = ? ORDER BY created_at DESC LIMIT -1 OFFSET 1000
+          SELECT id FROM logs WHERE monitor_id = ? ORDER BY created_at DESC LIMIT -1 OFFSET ?
         )
-      `).bind(monitor.id).run();
+      `).bind(monitor.id, LOGS_PER_MONITOR).run();
     }
     console.log('Log cleanup completed.');
   } catch (e: unknown) { console.error('Log cleanup error:', e); }

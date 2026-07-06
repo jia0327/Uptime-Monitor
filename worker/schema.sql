@@ -151,7 +151,7 @@ INSERT INTO settings (key, value) VALUES ('alert_template_error_rate', '错误�
 -- ALTER TABLE incidents ADD COLUMN affected_monitors TEXT;
 --
 -- ============================================================
--- D1 额度优化索引
+-- D1 额度优化：日志保留约 500 条/监控（由 worker cleanupLogs 执行）
 -- ============================================================
 -- CREATE INDEX IF NOT EXISTS idx_logs_monitor_created ON logs(monitor_id, created_at DESC);
 -- CREATE INDEX IF NOT EXISTS idx_logs_created ON logs(created_at);

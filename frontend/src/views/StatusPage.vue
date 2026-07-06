@@ -175,7 +175,7 @@ onMounted(() => {
     fetchMonitors();
     fetchIncidents();
     fetchSettings();
-    _timer = setInterval(fetchMonitors, 30000);
+    _timer = setInterval(fetchMonitors, 60000);
 });
 onUnmounted(() => clearInterval(_timer));
 </script>

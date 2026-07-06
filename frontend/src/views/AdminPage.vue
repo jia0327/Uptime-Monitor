@@ -11,7 +11,7 @@
 
     <!-- 顶部导航 -->
     <AdminHeader v-if="isAuthenticated" :isDark="isDark" :loading="loading" :lastRefreshed="lastRefreshed"
-      @toggle-theme="toggleTheme" @refresh="fetchMonitors" @logout="logout" />
+      @toggle-theme="toggleTheme" @refresh="refreshAll" @logout="logout" />
 
     <!-- 主要内容 -->
     <main v-if="isAuthenticated" class="flex-1 max-w-5xl w-full mx-auto px-4 py-8">
@@ -44,7 +44,7 @@
       <div v-if="error" class="mb-6 glass rounded-xl p-4 flex items-center gap-3 border border-orange-300 dark:border-orange-500/40 bg-orange-50/80 dark:bg-orange-500/10 fade-up">
         <i class="fas fa-exclamation-circle text-orange-400 shrink-0"></i>
         <p class="text-sm text-orange-300 flex-1">{{ error }}</p>
-        <button @click="fetchMonitors" class="text-xs px-3 py-1.5 rounded-lg bg-orange-500/15 text-orange-400 hover:bg-orange-500/25 transition-colors font-medium cursor-pointer">重试</button>
+        <button @click="refreshAll" class="text-xs px-3 py-1.5 rounded-lg bg-orange-500/15 text-orange-400 hover:bg-orange-500/25 transition-colors font-medium cursor-pointer">重试</button>
       </div>
 
       <!-- 统计概览 -->
@@ -52,7 +52,7 @@
 
       <div v-if="isAuthenticated && health" class="mb-6 glass rounded-xl px-4 py-3 fade-up flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
         <span class="font-semibold text-slate-500 dark:text-slate-400">系统状态</span>
-        <span class="font-mono text-slate-600 dark:text-slate-300">D1 {{ health.logs }}</span>
+        <span class="font-mono text-slate-600 dark:text-slate-300">Monitors {{ health.monitors }}</span>
         <span class="font-mono text-slate-600 dark:text-slate-300">Channels {{ health.enabled_channels }}</span>
         <span class="font-mono text-slate-600 dark:text-slate-300">Daily {{ health.latest_daily_uptime || '-' }}</span>
         <span class="font-mono text-slate-600 dark:text-slate-300">Last {{ formatDateFull(health.latest_log_at) }}</span>
@@ -157,13 +157,16 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useAuth } from '../composables/useAuth';
 import { useTheme } from '../composables/useTheme';
 import { useToast } from '../composables/useToast';
 import { API_BASE, fetchT, withRetry } from '../utils/api';
 import { formatDateFull, getDaysRemaining, getExpiryClassAdmin } from '../utils/format';
 import { collectAllTags, isBookmark } from '../utils/monitor';
+
+const MONITOR_REFRESH_MS = 60000;
+const STATS_REFRESH_MS = 120000;
 
 // 子组件
 import LoginDialog from '../components/admin/LoginDialog.vue';
@@ -300,19 +303,29 @@ const openAddModal = () => {
 };
 
 // ── 数据获取 ──
+const mergePublicStats = (adminData, publicMonitors) => {
+    const existing = new Map(monitors.value.map(m => [m.id, m]));
+    const publicMap = {};
+    (publicMonitors || []).forEach(pm => { publicMap[pm.id] = pm; });
+    return adminData.map(m => {
+        const prev = existing.get(m.id);
+        const pm = publicMap[m.id];
+        return {
+            ...m,
+            _latency: pm?.latency ?? prev?._latency ?? null,
+            _sparkData: pm?.recent_latencies ?? prev?._sparkData ?? null,
+        };
+    });
+};
+
 const fetchMonitors = async () => {
     if (!isAuthenticated.value) return;
     loading.value = true; error.value = null;
     try {
-        const [adminRes, publicRes] = await Promise.all([
-            withRetry(() => authFetch(`${API_BASE}/monitors`)),
-            fetchT(`${API_BASE}/monitors/public/details`).catch(() => null)
-        ]);
+        const adminRes = await withRetry(() => authFetch(`${API_BASE}/monitors`));
         if (adminRes && adminRes.ok) {
             const adminData = await adminRes.json();
-            let publicMap = {};
-            if (publicRes && publicRes.ok) { try { const pd = await publicRes.json(); (pd.monitors || []).forEach(pm => { publicMap[pm.id] = pm; }); } catch {} }
-            monitors.value = adminData.map(m => { const pm = publicMap[m.id]; m._latency = pm?.latency ?? null; m._sparkData = pm?.recent_latencies ?? null; return m; });
+            monitors.value = mergePublicStats(adminData, null);
             lastRefreshed.value = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
         } else {
             let errorMsg = `数据加载失败 (${adminRes?.status || '网络错误'})`;
@@ -323,6 +336,21 @@ const fetchMonitors = async () => {
     finally { loading.value = false; }
 };
 
+const fetchMonitorStats = async () => {
+    if (!isAuthenticated.value || monitors.value.length === 0) return;
+    try {
+        const publicRes = await fetchT(`${API_BASE}/monitors/public/details`);
+        if (!publicRes.ok) return;
+        const pd = await publicRes.json();
+        monitors.value = mergePublicStats(monitors.value, pd.monitors || []);
+    } catch {}
+};
+
+const refreshAll = async () => {
+    await fetchMonitors();
+    await fetchMonitorStats();
+};
+
 const fetchHealth = async () => {
     if (!isAuthenticated.value) return;
     try {
@@ -331,7 +359,7 @@ const fetchHealth = async () => {
     } catch {}
 };
 
-const onLogin = () => { fetchMonitors(); fetchHealth(); };
+const onLogin = () => { refreshAll(); fetchHealth(); };
 
 // ── 添加监控 ──
 const addMonitor = async () => {
@@ -371,6 +399,7 @@ const forceCheck = async (m) => {
         if (res.ok) {
             addToast(`已更新：${m.name}`, 'success');
             await fetchMonitors();
+            await fetchMonitorStats();
         } else {
             const d = await res.json().catch(() => ({}));
             addToast(d.error || '检查失败', 'error');
@@ -471,14 +500,27 @@ const exportMonitors = () => {
 };
 
 // ── 键盘快捷键 ──
+let _monitorTimer;
+let _statsTimer;
+
 onMounted(() => {
-    if (isAuthenticated.value) { fetchMonitors(); fetchHealth(); setInterval(fetchMonitors, 30000); }
+    if (isAuthenticated.value) {
+        refreshAll();
+        fetchHealth();
+        _monitorTimer = setInterval(fetchMonitors, MONITOR_REFRESH_MS);
+        _statsTimer = setInterval(fetchMonitorStats, STATS_REFRESH_MS);
+    }
     document.addEventListener('keydown', (e) => {
         if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
         if (e.key === 'Escape') { showAddModal.value = false; showLogs.value = false; showConfig.value = false; showChannels.value = false; showIncidents.value = false; showSettings.value = false; if (confirmModal.value.show) handleConfirm(false); }
         if ((e.key === 'n' || e.key === 'N') && !showAddModal.value && !showLogs.value && !showConfig.value) { e.preventDefault(); openAddModal(); }
-        if ((e.key === 'r' || e.key === 'R') && !showAddModal.value && !showLogs.value && !showConfig.value) { e.preventDefault(); fetchMonitors(); }
+        if ((e.key === 'r' || e.key === 'R') && !showAddModal.value && !showLogs.value && !showConfig.value) { e.preventDefault(); refreshAll(); }
         if (e.key === '/' && !showAddModal.value && !showLogs.value && !showConfig.value) { e.preventDefault(); document.querySelector('.search-input')?.focus(); }
     });
+});
+
+onUnmounted(() => {
+    if (_monitorTimer) clearInterval(_monitorTimer);
+    if (_statsTimer) clearInterval(_statsTimer);
 });
 </script>
