@@ -215,6 +215,48 @@
 
 ---
 
+## 🔗 配套工具与推荐配置
+
+本仓库专注 **HTTP 可用性、延迟与 DOWN/UP 告警**。若还需域名到期提醒与 Cloudflare 免费额度监控，可与同系列配套项目组合使用，各司其职、避免重复告警。
+
+### 职责划分
+
+| 工具 | 职责 |
+|------|------|
+| **Uptime Monitor**（本仓库） | HTTP 可用性、延迟、DOWN/UP 告警 |
+| **[domain-autocheck](https://github.com/jia0327/domain-autocheck)** | 域名 WHOIS / 到期、续费提醒、多注册商、DNSHE 导入、CF NS 徽章 |
+| **[CF-Quota-Dashboard](https://github.com/jia0327/CF-Quota-Dashboard)** | CF 账号免费额度（D1 / KV / Workers 等）、阈值告警、多账号 |
+
+### 各类型监控的推荐配置
+
+**1. CF 托管服务（Workers / Pages、橙云代理）**
+
+- 关闭 **SSL 证书到期**检查（CF Universal SSL 自动续期）
+- 关闭 **域名到期**检查（交由 [domain-autocheck](https://github.com/jia0327/domain-autocheck) 负责）
+- 探测 URL 使用轻量健康端点，如 `/api/health`，避免 SPA 管理页 `/admin`
+- 非关键服务 `interval` 建议 **≥ 5 分钟**，降低 D1 读压力
+
+**2. 书签 / 内网 NAS（`interval = 0`）**
+
+- 关闭 SSL 与域名检查
+- 不进行 HTTP 探测，仅作跳转导航
+
+**3. 自托管 / 非 CF 源站（手动 SSL）**
+
+- 按需保留 SSL 检查
+- 域名检查可选；若已部署 domain-autocheck，建议在 Uptime Monitor 中关闭，避免重复告警
+
+### 生态组合清单
+
+- 三个项目均可部署在 **Cloudflare 免费额度**上
+- 在 Uptime Monitor 中为 **domain-autocheck** 与 **CF-Quota-Dashboard** 的 Worker 本身添加健康检查
+- **避免重复告警**：domain-autocheck 已覆盖的域名到期提醒，请在 Uptime Monitor 中关闭对应开关
+- 使用 [CF-Quota-Dashboard](https://github.com/jia0327/CF-Quota-Dashboard) 关注 D1 读写趋势（尤其 Uptime Monitor 优化后仍接近额度时）
+
+> 配套项目：[domain-autocheck](https://github.com/jia0327/domain-autocheck) · [CF-Quota-Dashboard](https://github.com/jia0327/CF-Quota-Dashboard)
+
+---
+
 ## 🛠️ 部署
 
 ### 前置要求
